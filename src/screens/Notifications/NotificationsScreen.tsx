@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import ErrorCard from '../../components/ErrorCard'
+import EmptyState from '../../components/EmptyState'
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../services'
 import { colors, radius, spacing } from '../../theme'
 import { pickArray } from '../../utils/backendAdapters'
@@ -7,22 +9,24 @@ import { pickArray } from '../../utils/backendAdapters'
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [markingAll, setMarkingAll] = useState(false)
 
-  const load = useCallback(async () => {
+  const refetch = useCallback(async () => {
     setLoading(true)
+    setError('')
     try {
       const res = await getNotifications('per_page=30')
       const list = pickArray(res?.data, ['notifications', 'items'])
       setNotifications(list)
     } catch {
-      setNotifications([])
+      setError('Unable to load. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { refetch() }, [refetch])
 
   async function handleMarkRead(id: string) {
     try {
@@ -62,15 +66,18 @@ export default function NotificationsScreen() {
       </View>
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} /> : null}
-      {!loading && !notifications.length ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🔔</Text>
-          <Text style={styles.emptyTitle}>No notifications</Text>
-          <Text style={styles.emptyMeta}>You're all caught up.</Text>
-        </View>
+
+      {!loading && error ? <ErrorCard message={error} onRetry={refetch} /> : null}
+
+      {!loading && !error && !notifications.length ? (
+        <EmptyState
+          emoji="🔔"
+          title="All caught up!"
+          subtitle="No new notifications right now."
+        />
       ) : null}
 
-      {notifications.map(n => {
+      {!error && notifications.map(n => {
         const id = String(n.id || n.uuid || '')
         const isRead = Boolean(n.read_at)
         const title = n.title || n.data?.title || n.type?.replace(/_/g, ' ') || 'Notification'
@@ -98,16 +105,12 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 44 },
+  content: { padding: spacing.lg, paddingBottom: 48 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.lg },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   subtitle: { color: colors.primary, fontWeight: '700', marginTop: 4 },
   markAllBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primary },
   markAllText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
-  emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: spacing.md },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
-  emptyMeta: { color: colors.muted, marginTop: 6 },
   notifCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

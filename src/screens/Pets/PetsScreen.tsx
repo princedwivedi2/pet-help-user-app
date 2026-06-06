@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native'
 import PetCard from '../../components/PetCard'
+import ErrorCard from '../../components/ErrorCard'
+import EmptyState from '../../components/EmptyState'
 import { getPets, createPet, updatePet, deletePet } from '../../services'
 import { useNavigation } from '@react-navigation/native'
 import { colors, radius, spacing } from '../../theme'
@@ -11,6 +13,7 @@ const SPECIES = ['Dog', 'Cat', 'Bird', 'Rabbit', 'Other']
 export default function PetsScreen() {
   const nav = useNavigation<any>()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [pets, setPets] = useState<any[]>([])
 
   // Add/edit modal
@@ -22,20 +25,21 @@ export default function PetsScreen() {
   const [petBirthDate, setPetBirthDate] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const load = useCallback(async () => {
+  const refetch = useCallback(async () => {
     setLoading(true)
+    setError('')
     try {
       const res = await getPets()
       const list = pickArray(res?.data, ['pets', 'items']).map((pet, index) => normalizePet(pet, index))
       setPets(list)
     } catch {
-      setPets([])
+      setError('Unable to load. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { refetch() }, [refetch])
 
   function openAdd() {
     setEditTarget(null)
@@ -82,7 +86,7 @@ export default function PetsScreen() {
         }
       }
       setFormVisible(false)
-      load()
+      refetch()
     } catch {
       Alert.alert('Error', 'Could not save pet. Please try again.')
     } finally {
@@ -102,7 +106,7 @@ export default function PetsScreen() {
           onPress: async () => {
             try {
               await deletePet(pet.uuid || pet.id)
-              load()
+              refetch()
             } catch {
               Alert.alert('Error', 'Could not delete pet. Please try again.')
             }
@@ -133,31 +137,38 @@ export default function PetsScreen() {
       </View>
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} /> : null}
-      {!loading && !pets.length ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🐾</Text>
-          <Text style={styles.emptyTitle}>No pets yet</Text>
-          <Text style={styles.emptyMeta}>Tap "+ Add pet" to get started.</Text>
-        </View>
+
+      {!loading && error ? <ErrorCard message={error} onRetry={refetch} /> : null}
+
+      {!loading && !error && !pets.length ? (
+        <EmptyState
+          emoji="🐶"
+          title="No pets added yet"
+          subtitle="Add your first pet to start tracking their health."
+          ctaLabel="Add a pet"
+          onCta={openAdd}
+        />
       ) : null}
 
-      <View style={styles.petList}>
-        {pets.map(p => (
-          <View key={p.id}>
-            <Pressable onPress={() => nav.navigate('PetRecords', { petId: p.uuid || p.id, pet: p })}>
-              <PetCard pet={p} />
-            </Pressable>
-            <View style={styles.petActions}>
-              <Pressable style={styles.editBtn} onPress={() => openEdit(p)}>
-                <Text style={styles.editBtnText}>Edit</Text>
+      {!error && (
+        <View style={styles.petList}>
+          {pets.map(p => (
+            <View key={p.id}>
+              <Pressable onPress={() => nav.navigate('PetRecords', { petId: p.uuid || p.id, pet: p })}>
+                <PetCard pet={p} />
               </Pressable>
-              <Pressable style={styles.deleteBtn} onPress={() => handleDelete(p)}>
-                <Text style={styles.deleteBtnText}>Delete</Text>
-              </Pressable>
+              <View style={styles.petActions}>
+                <Pressable style={styles.editBtn} onPress={() => openEdit(p)}>
+                  <Text style={styles.editBtnText}>Edit</Text>
+                </Pressable>
+                <Pressable style={styles.deleteBtn} onPress={() => handleDelete(p)}>
+                  <Text style={styles.deleteBtnText}>Delete</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
+      )}
 
       {/* Add / Edit modal */}
       <Modal visible={formVisible} animationType="slide" presentationStyle="pageSheet">
@@ -183,7 +194,7 @@ export default function PetsScreen() {
           <TextInput value={petBirthDate} onChangeText={setPetBirthDate} style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor={colors.muted} />
 
           <Pressable style={styles.saveButton} onPress={handleSave} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff7f1" /> : <Text style={styles.saveButtonText}>{editTarget ? 'Save changes' : 'Add pet'}</Text>}
+            {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.saveButtonText}>{editTarget ? 'Save changes' : 'Add pet'}</Text>}
           </Pressable>
           <Pressable style={styles.cancelButton} onPress={() => setFormVisible(false)}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -196,26 +207,22 @@ export default function PetsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 44 },
+  content: { padding: spacing.lg, paddingBottom: 48 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.lg },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   subtitle: { color: colors.muted, marginTop: 4 },
   addBtn: { backgroundColor: colors.primary, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  addBtnText: { color: '#fff7f1', fontWeight: '800', fontSize: 13 },
+  addBtnText: { color: colors.onPrimary, fontWeight: '800', fontSize: 13 },
   heroCard: { backgroundColor: colors.primary, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg },
   heroLabel: { color: 'rgba(255,247,241,0.8)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: '800' },
-  heroValue: { color: '#fff7f1', fontSize: 24, fontWeight: '900', marginTop: 6 },
-  heroMeta: { color: '#fff7f1', marginTop: 4, opacity: 0.92 },
+  heroValue: { color: colors.onPrimary, fontSize: 24, fontWeight: '900', marginTop: 6 },
+  heroMeta: { color: colors.onPrimary, marginTop: 4, opacity: 0.92 },
   petList: { gap: 4 },
   petActions: { flexDirection: 'row', gap: 8, marginTop: -4, marginBottom: spacing.sm },
   editBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.primary },
   editBtnText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
   deleteBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.danger },
   deleteBtnText: { color: colors.danger, fontWeight: '700', fontSize: 12 },
-  emptyState: { alignItems: 'center', paddingTop: 40, paddingBottom: 20 },
-  emptyIcon: { fontSize: 48, marginBottom: spacing.md },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
-  emptyMeta: { color: colors.muted, marginTop: 6 },
   // Modal
   modal: { flex: 1, backgroundColor: colors.bg },
   modalContent: { padding: spacing.lg, paddingBottom: 48 },
@@ -225,9 +232,9 @@ const styles = StyleSheet.create({
   pill: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   pillText: { color: colors.text, fontWeight: '700' },
-  pillTextActive: { color: '#fff7f1' },
+  pillTextActive: { color: colors.onPrimary },
   saveButton: { marginTop: spacing.lg, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
-  saveButtonText: { color: '#fff7f1', fontWeight: '800' },
+  saveButtonText: { color: colors.onPrimary, fontWeight: '800' },
   cancelButton: { marginTop: spacing.sm, paddingVertical: 14, alignItems: 'center' },
   cancelButtonText: { color: colors.muted, fontWeight: '700' },
 })

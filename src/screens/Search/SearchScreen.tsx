@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import VetCard from '../../components/VetCard'
+import ErrorCard from '../../components/ErrorCard'
+import EmptyState from '../../components/EmptyState'
 import { useNavigation } from '@react-navigation/native'
 import { getVets } from '../../services'
 import { colors, radius, spacing } from '../../theme'
@@ -33,6 +35,11 @@ export default function SearchScreen() {
     })
   }
 
+  function clearSearch() {
+    setQuery('')
+    setActiveFilters(new Set())
+  }
+
   useEffect(() => {
     const timer = setTimeout(async () => {
       setLoading(true)
@@ -47,7 +54,7 @@ export default function SearchScreen() {
         const list = pickArray(data, ['vets', 'nearby_vets', 'all_vets', 'city_vets']).map((vet, index) => normalizeVet(vet, index))
         setVets(list)
       } catch {
-        setError('Unable to load vets right now.')
+        setError('Unable to load. Check your connection and try again.')
         setVets([])
       } finally {
         setLoading(false)
@@ -105,20 +112,16 @@ export default function SearchScreen() {
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} /> : null}
 
-      {!loading && error ? (
-        <View style={styles.errorBlock}>
-          <Text style={styles.error}>{error}</Text>
-          <Pressable onPress={() => setQuery(q => q)} style={styles.retryBtn}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : null}
+      {!loading && error ? <ErrorCard message={error} onRetry={() => setQuery(q => q)} /> : null}
 
       {!loading && !error && !data.length ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>{activeFilters.size > 0 || query ? 'No vets match your filters' : 'No vets found'}</Text>
-          <Text style={styles.emptyMeta}>{activeFilters.size > 0 ? 'Try removing some filters.' : 'Check your connection and try again.'}</Text>
-        </View>
+        <EmptyState
+          emoji="🔍"
+          title="No vets found"
+          subtitle="Try adjusting your search or filters."
+          ctaLabel="Clear search"
+          onCta={clearSearch}
+        />
       ) : null}
 
       {data.map(vet => (
@@ -132,7 +135,7 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 44 },
+  content: { padding: spacing.lg, paddingBottom: 48 },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   subtitle: { marginTop: 6, color: colors.muted, lineHeight: 20 },
   searchBar: {
@@ -155,16 +158,9 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
-  chipTextActive: { color: '#fff7f1' },
+  chipTextActive: { color: colors.onPrimary },
   resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
   sectionMeta: { color: colors.muted },
   resultCard: { marginBottom: spacing.sm },
-  errorBlock: { marginTop: spacing.sm },
-  error: { color: colors.danger },
-  retryBtn: { marginTop: spacing.sm, alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
-  retryText: { color: colors.text, fontWeight: '700' },
-  emptyState: { alignItems: 'center', paddingTop: 40 },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
-  emptyMeta: { color: colors.muted, marginTop: 6 },
 })

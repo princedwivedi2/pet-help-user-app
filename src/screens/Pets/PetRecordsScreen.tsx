@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
+import ErrorCard from '../../components/ErrorCard'
+import EmptyState from '../../components/EmptyState'
 import { getPetMedicalRecords, getPetVisitRecords, getPetMedications, getPetReminders, getPetNotes } from '../../services'
 import { useRoute } from '@react-navigation/native'
 import { colors, radius, spacing } from '../../theme'
@@ -15,6 +17,17 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'notes', label: 'Notes' },
 ]
 
+function getEmptyState(tab: Tab) {
+  if (tab === 'visits') {
+    return { emoji: '🩺', title: 'No visit records', subtitle: 'Visit records from your vet will appear here.' }
+  }
+  return {
+    emoji: '📄',
+    title: `No ${tab} yet`,
+    subtitle: "Add records to keep your pet's health up to date.",
+  }
+}
+
 export default function PetRecordsScreen() {
   const route = useRoute<any>()
   const pet = route.params?.pet
@@ -22,11 +35,13 @@ export default function PetRecordsScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('visits')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [records, setRecords] = useState<any[]>([])
 
-  const load = useCallback(async (tab: Tab) => {
+  const refetch = useCallback(async (tab: Tab) => {
     if (!petId) return
     setLoading(true)
+    setError('')
     setRecords([])
     try {
       let res: any
@@ -39,13 +54,15 @@ export default function PetRecordsScreen() {
       const list = pickArray(res?.data, ['items', 'records', 'data', 'medications', 'reminders', 'notes', 'visit_records', 'medical_records'])
       setRecords(list)
     } catch {
-      setRecords([])
+      setError('Unable to load. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }, [petId])
 
-  useEffect(() => { load(activeTab) }, [load, activeTab])
+  useEffect(() => { refetch(activeTab) }, [refetch, activeTab])
+
+  const emptyState = getEmptyState(activeTab)
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -62,11 +79,14 @@ export default function PetRecordsScreen() {
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} /> : null}
 
-      {!loading && !records.length ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No {activeTab} found</Text>
-          <Text style={styles.emptyMeta}>Records will appear here once added by your vet.</Text>
-        </View>
+      {!loading && error ? <ErrorCard message={error} onRetry={() => refetch(activeTab)} /> : null}
+
+      {!loading && !error && !records.length ? (
+        <EmptyState
+          emoji={emptyState.emoji}
+          title={emptyState.title}
+          subtitle={emptyState.subtitle}
+        />
       ) : null}
 
       {records.map((r, i) => (
@@ -97,17 +117,14 @@ function RecordCard({ record, tab }: { record: any; tab: Tab }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 44 },
+  content: { padding: spacing.lg, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '800', color: colors.text },
   subtitle: { color: colors.muted, marginTop: 4, marginBottom: spacing.lg },
   tabBar: { gap: 8, marginBottom: spacing.lg },
   tab: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   tabText: { color: colors.text, fontWeight: '700', fontSize: 13 },
-  tabTextActive: { color: '#fff7f1' },
-  emptyState: { alignItems: 'center', paddingTop: 40 },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
-  emptyMeta: { color: colors.muted, marginTop: 6, textAlign: 'center' },
+  tabTextActive: { color: colors.onPrimary },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.sm },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontWeight: '800', color: colors.text, flex: 1 },
