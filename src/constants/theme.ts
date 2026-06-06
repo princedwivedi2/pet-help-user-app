@@ -13,6 +13,9 @@ export const colors = {
   warning: '#f59e0b',
   danger: '#ef4444',
   dark: '#111827',
+  onPrimary: '#fff7f1',
+  dangerSoft: '#fef2f2',
+  dangerBorder: '#fecaca',
 };
 
 export const radius = {

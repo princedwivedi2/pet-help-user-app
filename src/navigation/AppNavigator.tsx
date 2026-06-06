@@ -18,6 +18,12 @@ import SosScreen from '../screens/SOS/SosScreen'
 import ConfirmationScreen from '../screens/Confirmation/ConfirmationScreen'
 import ModalityPickerScreen from '../screens/Consultation/ModalityPickerScreen'
 import ConsultationRoomScreen from '../screens/Consultation/ConsultationRoomScreen'
+import AppointmentDetailScreen from '../screens/Appointments/AppointmentDetailScreen'
+import BlogScreen from '../screens/Blog/BlogScreen'
+import BlogPostScreen from '../screens/Blog/BlogPostScreen'
+import PrescriptionsScreen from '../screens/Pets/PrescriptionsScreen'
+import SubscriptionPlansScreen from '../screens/Subscription/SubscriptionPlansScreen'
+import ChatScreen from '../screens/Chat/ChatScreen'
 import { AuthProvider } from '../contexts/AuthProvider'
 
 const Stack = createNativeStackNavigator()
@@ -70,8 +76,12 @@ export default function AppNavigator() {
           <Stack.Screen name="Confirmation" component={ConfirmationScreen} />
           <Stack.Screen name="ModalityPicker" component={ModalityPickerScreen} />
           <Stack.Screen name="ConsultationRoom" component={ConsultationRoomScreen} />
-          {/* Placeholder routes — screens to be built in P2 */}
-          {/* Blog, Subscriptions, Chat, Prescriptions */}
+          <Stack.Screen name="AppointmentDetail" component={AppointmentDetailScreen} />
+          <Stack.Screen name="Blog" component={BlogScreen} />
+          <Stack.Screen name="BlogPost" component={BlogPostScreen} />
+          <Stack.Screen name="Prescriptions" component={PrescriptionsScreen} />
+          <Stack.Screen name="Subscriptions" component={SubscriptionPlansScreen} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </AuthProvider>
