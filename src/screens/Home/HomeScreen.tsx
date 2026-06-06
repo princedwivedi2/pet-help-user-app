@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import { quickActions, vetHighlights, pets, appointments, articles } from '../../data/mock'
 import QuickAction from '../../components/QuickAction'
 import VetCard from '../../components/VetCard'
 import PetCard from '../../components/PetCard'
 import AppointmentCard from '../../components/AppointmentCard'
+import ErrorCard from '../../components/ErrorCard'
 import { useNavigation } from '@react-navigation/native'
 import { useAuth } from '../../contexts/AuthProvider'
 import { getAppointments, getBlogPosts, getPets, getVets, getUnreadNotificationCount } from '../../services'
@@ -16,6 +17,7 @@ export default function HomeScreen() {
   const { user } = useAuth()
   const firstName = user?.name?.split(' ')[0] || 'Aanya'
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
   const [vetFeed, setVetFeed] = useState<any[]>(vetHighlights)
   const [petFeed, setPetFeed] = useState<any[]>(pets)
   const [appointmentFeed, setAppointmentFeed] = useState<any[]>(appointments)
@@ -24,10 +26,10 @@ export default function HomeScreen() {
   const [upcomingCount, setUpcomingCount] = useState<string>('—')
   const [unreadNotifs, setUnreadNotifs] = useState(0)
 
-  useEffect(() => {
-    async function loadHome() {
-      setLoading(true)
-      try {
+  const loadHome = useCallback(async () => {
+    setLoading(true)
+    setError(false)
+    try {
         const [vetsRes, petsRes, appointmentsRes, postsRes, notifsRes] = await Promise.allSettled([
           getVets('limit=5'),
           getPets(),
@@ -74,13 +76,14 @@ export default function HomeScreen() {
           }))
           if (posts.length) setArticleFeed(posts)
         }
-      } finally {
-        setLoading(false)
-      }
+    } catch {
+      setError(true)
+    } finally {
+      setLoading(false)
     }
-
-    loadHome()
   }, [])
+
+  useEffect(() => { loadHome() }, [loadHome])
 
   function handleQuickAction(id: string) {
     if (id === 'sos') {
@@ -149,13 +152,16 @@ export default function HomeScreen() {
 
       <SectionHeader title="Upcoming appointments" action="Bookings" onAction={() => nav.navigate('Bookings')} />
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.sm }} /> : null}
-      {appointmentFeed.slice(0, 3).map(a => (
-        <AppointmentCard key={a.id} appt={a} />
+      {error ? <ErrorCard message="Unable to load. Check your connection and try again." onRetry={loadHome} /> : null}
+      {!error && appointmentFeed.slice(0, 3).map(a => (
+        <Pressable key={a.id} onPress={() => nav.navigate('AppointmentDetail', { appointmentId: a.id, appointment: a })}>
+          <AppointmentCard appt={a} />
+        </Pressable>
       ))}
 
-      <SectionHeader title="Tips & articles" action="Browse" onAction={() => Alert.alert('Coming soon', 'Pet care articles arrive in the next update.')} />
+      <SectionHeader title="Tips & articles" action="Browse" onAction={() => nav.navigate('Blog')} />
       {articleFeed.map(a => (
-        <Pressable key={a.id} style={styles.articleCard} onPress={() => Alert.alert('Coming soon', 'Pet care articles arrive in the next update.')}>
+        <Pressable key={a.id} style={styles.articleCard} onPress={() => nav.navigate('Blog')}>
           <Text style={styles.articleCategory}>{typeof a.category === 'object' ? (a.category as any)?.name || 'Health' : a.category}</Text>
           <Text style={styles.articleTitle}>{a.title}</Text>
           <Text style={styles.articleMeta}>{a.readTime}</Text>
