@@ -24,6 +24,7 @@ export default function PetsScreen() {
   const [petBreed, setPetBreed] = useState('')
   const [petBirthDate, setPetBirthDate] = useState('')
   const [saving, setSaving] = useState(false)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   const refetch = useCallback(async () => {
     setLoading(true)
@@ -47,6 +48,7 @@ export default function PetsScreen() {
     setPetSpecies('Dog')
     setPetBreed('')
     setPetBirthDate('')
+    setFormErrors({})
     setFormVisible(true)
   }
 
@@ -56,14 +58,16 @@ export default function PetsScreen() {
     setPetSpecies(pet.species || 'Dog')
     setPetBreed(pet.raw?.breed || '')
     setPetBirthDate(pet.raw?.birth_date || '')
+    setFormErrors({})
     setFormVisible(true)
   }
 
   async function handleSave() {
     if (!petName.trim()) {
-      Alert.alert('Name required', "Enter your pet's name.")
+      setFormErrors({ petName: 'Pet name is required' })
       return
     }
+    setFormErrors({})
     setSaving(true)
     try {
       const payload = {
@@ -176,7 +180,15 @@ export default function PetsScreen() {
           <Text style={styles.modalTitle}>{editTarget ? 'Edit pet' : 'Add a pet'}</Text>
 
           <Text style={styles.fieldLabel}>Pet name *</Text>
-          <TextInput value={petName} onChangeText={setPetName} style={styles.input} placeholder="e.g. Bingo" placeholderTextColor={colors.muted} />
+          <TextInput
+            value={petName}
+            onChangeText={v => { setPetName(v); setFormErrors(p => { const n = { ...p }; delete n.petName; return n }) }}
+            onBlur={() => { if (!petName.trim()) setFormErrors(p => ({ ...p, petName: 'Pet name is required' })) }}
+            style={styles.input}
+            placeholder="e.g. Bingo"
+            placeholderTextColor={colors.muted}
+          />
+          {formErrors.petName ? <Text style={styles.fieldError}>{formErrors.petName}</Text> : null}
 
           <Text style={styles.fieldLabel}>Species</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
@@ -228,6 +240,7 @@ const styles = StyleSheet.create({
   modalContent: { padding: spacing.lg, paddingBottom: 48 },
   modalTitle: { fontSize: 24, fontWeight: '900', color: colors.text, marginBottom: spacing.lg },
   fieldLabel: { color: colors.text, fontWeight: '700', marginBottom: 6, marginTop: spacing.md },
+  fieldError: { color: colors.danger, fontSize: 12, marginTop: 4 },
   input: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 14, color: colors.text },
   pill: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },

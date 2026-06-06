@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { View, Text, TextInput, Alert, ScrollView, Pressable, StyleSheet } from 'react-native'
+import { View, Text, TextInput, Alert, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import PrimaryButton from '../../components/PrimaryButton'
 import { login, register, sendOtp, verifyOtp, forgotPassword } from '../../services'
 import { API_BASE } from '../../services/client'
@@ -18,6 +18,7 @@ export default function LoginScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const { setToken } = useAuth()
   const navigation = useNavigation<any>()
 
@@ -31,11 +32,51 @@ export default function LoginScreen() {
   const canSendOtp = Boolean(identifier) && !loading
   const canVerifyOtp = Boolean(identifier && trimmedOtpCode) && !loading
 
-  async function handleSignIn() {
-    if (!identifier || !trimmedPassword) {
-      Alert.alert('Login failed', 'Enter both email or phone and password before signing in.')
-      return
+  function validateField(field: string, value: string) {
+    let msg = ''
+    if (field === 'identifier') {
+      if (!value.trim()) msg = 'Enter your email or phone number'
+    } else if (field === 'email') {
+      if (value.trim() && !/\S+@\S+\.\S+/.test(value.trim())) msg = 'Enter a valid email address'
+    } else if (field === 'phone') {
+      if (value.trim() && !/^\d{10,}$/.test(value.replace(/\s/g, ''))) msg = 'Enter a valid phone number'
+    } else if (field === 'password') {
+      if (value.trim().length < 8) msg = 'Password must be at least 8 characters'
+    } else if (field === 'confirmPassword') {
+      if (value.trim() !== trimmedPassword) msg = 'Passwords do not match'
     }
+    setErrors(prev => {
+      if (!msg) {
+        const next = { ...prev }
+        delete next[field]
+        return next
+      }
+      return { ...prev, [field]: msg }
+    })
+  }
+
+  function validateSignUp(): boolean {
+    const errs: Record<string, string> = {}
+    if (!trimmedName) errs.name = 'Name is required'
+    if (!identifier) errs.identifier = 'Enter your email or phone number'
+    if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) errs.email = 'Enter a valid email address'
+    if (phone.trim() && !/^\d{10,}$/.test(phone.replace(/\s/g, ''))) errs.phone = 'Enter a valid phone number'
+    if (trimmedPassword.length < 8) errs.password = 'Password must be at least 8 characters'
+    if (trimmedConfirmPassword !== trimmedPassword) errs.confirmPassword = 'Passwords do not match'
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  function validateSignIn(): boolean {
+    const errs: Record<string, string> = {}
+    if (!identifier) errs.identifier = 'Enter your email or phone number'
+    if (trimmedPassword.length < 8) errs.password = 'Password must be at least 8 characters'
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  async function handleSignIn() {
+    if (!validateSignIn()) return
 
     setLoading(true)
     try {
@@ -59,15 +100,7 @@ export default function LoginScreen() {
   }
 
   async function handleSignUp() {
-    if (!trimmedName || !identifier || !trimmedPassword || !trimmedConfirmPassword) {
-      Alert.alert('Signup failed', 'Fill in all required fields before creating an account.')
-      return
-    }
-
-    if (trimmedPassword !== trimmedConfirmPassword) {
-      Alert.alert('Signup failed', 'Passwords do not match.')
-      return
-    }
+    if (!validateSignUp()) return
 
     setLoading(true)
     try {
@@ -94,7 +127,7 @@ export default function LoginScreen() {
 
   async function handleOtp() {
     if (!identifier) {
-      Alert.alert('OTP', 'Enter a phone number or email first.')
+      setErrors({ identifier: 'Enter your email or phone number' })
       return
     }
 
@@ -133,7 +166,7 @@ export default function LoginScreen() {
 
   async function handleForgotPassword() {
     if (!identifier) {
-      Alert.alert('Reset password', 'Enter your email first.')
+      setErrors({ identifier: 'Enter your email or phone number' })
       return
     }
 
@@ -167,27 +200,62 @@ export default function LoginScreen() {
 
         <View style={styles.segmentWrap}>
           {(['login', 'signup', 'otp'] as const).map(item => (
-            <Pressable key={item} onPress={() => setMode(item)} style={[styles.segment, mode === item && styles.segmentActive]}>
+            <Pressable key={item} onPress={() => { setMode(item); setErrors({}) }} style={[styles.segment, mode === item && styles.segmentActive]}>
               <Text style={[styles.segmentText, mode === item && styles.segmentTextActive]}>{item.toUpperCase()}</Text>
             </Pressable>
           ))}
         </View>
 
+        {loading && <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.sm }} />}
+
         {mode === 'signup' ? (
           <View style={styles.form}>
-            <Field label="Full name" value={name} onChangeText={setName} placeholder="Aanya Sharma" />
-            <Field label="Email" value={email} onChangeText={setEmail} placeholder="aanya@respaw.app" keyboardType="email-address" />
-            <Field label="Phone" value={phone} onChangeText={setPhone} placeholder="9876543210" keyboardType="phone-pad" />
+            <Field
+              label="Full name"
+              value={name}
+              onChangeText={v => { setName(v); setErrors(p => { const n = { ...p }; delete n.name; return n }) }}
+              onBlur={() => { if (!name.trim()) setErrors(p => ({ ...p, name: 'Name is required' })) }}
+              placeholder="Aanya Sharma"
+              error={errors.name}
+            />
+            <Field
+              label="Email"
+              value={email}
+              onChangeText={v => { setEmail(v); setErrors(p => { const n = { ...p }; delete n.email; return n }) }}
+              onBlur={() => validateField('email', email)}
+              placeholder="aanya@respaw.app"
+              keyboardType="email-address"
+              error={errors.email}
+            />
+            <Field
+              label="Phone"
+              value={phone}
+              onChangeText={v => { setPhone(v); setErrors(p => { const n = { ...p }; delete n.phone; return n }) }}
+              onBlur={() => validateField('phone', phone)}
+              placeholder="9876543210"
+              keyboardType="phone-pad"
+              error={errors.phone}
+            />
             <Field
               label="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={v => { setPassword(v); setErrors(p => { const n = { ...p }; delete n.password; return n }) }}
+              onBlur={() => validateField('password', password)}
               placeholder="Min 8 characters"
               secureTextEntry={!passwordVisible}
               rightAction={passwordVisible ? 'Hide' : 'Show'}
               onRightAction={() => setPasswordVisible(v => !v)}
+              error={errors.password}
             />
-            <Field label="Confirm password" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Repeat password" secureTextEntry={!passwordVisible} />
+            <Field
+              label="Confirm password"
+              value={confirmPassword}
+              onChangeText={v => { setConfirmPassword(v); setErrors(p => { const n = { ...p }; delete n.confirmPassword; return n }) }}
+              onBlur={() => validateField('confirmPassword', confirmPassword)}
+              placeholder="Repeat password"
+              secureTextEntry={!passwordVisible}
+              error={errors.confirmPassword}
+            />
             <PrimaryButton title={loading ? 'Creating account...' : 'Create account'} onPress={handleSignUp} disabled={!canSignUp} />
             <Pressable onPress={handleForgotPassword}>
               <Text style={styles.link}>Forgot password?</Text>
@@ -195,21 +263,38 @@ export default function LoginScreen() {
           </View>
         ) : mode === 'otp' ? (
           <View style={styles.form}>
-            <Field label="Email or phone" value={identifier} onChangeText={value => { setEmail(value); setPhone(value) }} placeholder="aanya@respaw.app" />
+            <Field
+              label="Email or phone"
+              value={identifier}
+              onChangeText={v => { setEmail(v); setPhone(v); setErrors(p => { const n = { ...p }; delete n.identifier; return n }) }}
+              onBlur={() => { if (!identifier) setErrors(p => ({ ...p, identifier: 'Enter your email or phone number' })) }}
+              placeholder="aanya@respaw.app"
+              error={errors.identifier}
+            />
             {otpSent ? <Field label="6-digit code" value={otpCode} onChangeText={setOtpCode} placeholder="123456" keyboardType="number-pad" /> : null}
             <PrimaryButton title={loading ? 'Working...' : otpSent ? 'Verify OTP' : 'Send OTP'} onPress={handleOtp} disabled={otpSent ? !canVerifyOtp : !canSendOtp} />
           </View>
         ) : (
           <View style={styles.form}>
-            <Field label="Email or phone" value={identifier} onChangeText={value => { setEmail(value); setPhone(value) }} placeholder="aanya@respaw.app" keyboardType="email-address" />
+            <Field
+              label="Email or phone"
+              value={identifier}
+              onChangeText={v => { setEmail(v); setPhone(v); setErrors(p => { const n = { ...p }; delete n.identifier; return n }) }}
+              onBlur={() => { if (!identifier) setErrors(p => ({ ...p, identifier: 'Enter your email or phone number' })) }}
+              placeholder="aanya@respaw.app"
+              keyboardType="email-address"
+              error={errors.identifier}
+            />
             <Field
               label="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={v => { setPassword(v); setErrors(p => { const n = { ...p }; delete n.password; return n }) }}
+              onBlur={() => validateField('password', password)}
               placeholder="********"
               secureTextEntry={!passwordVisible}
               rightAction={passwordVisible ? 'Hide' : 'Show'}
               onRightAction={() => setPasswordVisible(v => !v)}
+              error={errors.password}
             />
             <PrimaryButton title={loading ? 'Signing in...' : 'Sign in'} onPress={handleSignIn} disabled={!canSignIn} />
             <Pressable onPress={handleForgotPassword}>
@@ -226,14 +311,16 @@ type FieldProps = {
   label: string
   value: string
   onChangeText: (value: string) => void
+  onBlur?: () => void
   placeholder: string
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'number-pad'
   secureTextEntry?: boolean
   rightAction?: string
   onRightAction?: () => void
+  error?: string
 }
 
-function Field({ label, value, onChangeText, placeholder, keyboardType = 'default', secureTextEntry, rightAction, onRightAction }: FieldProps) {
+function Field({ label, value, onChangeText, onBlur, placeholder, keyboardType = 'default', secureTextEntry, rightAction, onRightAction, error }: FieldProps) {
   return (
     <View style={styles.fieldWrap}>
       <View style={styles.fieldHeader}>
@@ -243,19 +330,21 @@ function Field({ label, value, onChangeText, placeholder, keyboardType = 'defaul
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        onBlur={onBlur}
         placeholder={placeholder}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         placeholderTextColor={colors.muted}
         style={styles.input}
       />
+      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 40 },
+  content: { padding: spacing.lg, paddingBottom: 48 },
   header: {
     paddingVertical: 32,
     paddingHorizontal: spacing.xl,
@@ -264,13 +353,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   wordmark: {
-    color: '#fff7f1',
+    color: colors.onPrimary,
     fontSize: 42,
     fontWeight: '800',
     letterSpacing: -1.2,
     fontFamily: 'serif',
   },
-  tagline: { color: '#fff7f1', marginTop: 6, fontSize: 15 },
+  tagline: { color: colors.onPrimary, marginTop: 6, fontSize: 15 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -294,12 +383,13 @@ const styles = StyleSheet.create({
   },
   segmentActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   segmentText: { color: colors.muted, fontWeight: '700', fontSize: 12, letterSpacing: 0.6 },
-  segmentTextActive: { color: '#fff' },
+  segmentTextActive: { color: colors.surface },
   form: { gap: 14 },
   fieldWrap: { gap: 6 },
   fieldHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   fieldLabel: { color: colors.text, fontWeight: '700', fontSize: 13 },
   fieldAction: { color: colors.primary, fontWeight: '700', fontSize: 12 },
+  fieldError: { color: colors.danger, fontSize: 12, marginTop: 4 },
   input: {
     backgroundColor: colors.surfaceSoft,
     borderWidth: 1,

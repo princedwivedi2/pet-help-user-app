@@ -14,17 +14,20 @@ export default function ProfileScreen() {
   const [editName, setEditName] = useState(user?.name || '')
   const [editEmail, setEditEmail] = useState(user?.email || '')
   const [editPhone, setEditPhone] = useState(user?.phone || '')
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
 
   // Change password state
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
+  const [pwErrors, setPwErrors] = useState<Record<string, string>>({})
 
   async function handleSaveProfile() {
     if (!editName.trim()) {
-      Alert.alert('Name required', 'Enter your name.')
+      setEditErrors({ name: 'Name is required' })
       return
     }
+    setEditErrors({})
     setSaving(true)
     try {
       const res = await updateProfile({ name: editName.trim(), email: editEmail.trim(), phone: editPhone.trim() })
@@ -43,18 +46,15 @@ export default function ProfileScreen() {
   }
 
   async function handleChangePassword() {
-    if (!currentPw || !newPw || !confirmPw) {
-      Alert.alert('All fields required', 'Fill in all password fields.')
+    const errs: Record<string, string> = {}
+    if (!currentPw) errs.currentPw = 'Current password is required'
+    if (newPw.length < 8) errs.newPw = 'Password must be at least 8 characters'
+    if (newPw !== confirmPw) errs.confirmPw = 'Passwords do not match'
+    if (Object.keys(errs).length) {
+      setPwErrors(errs)
       return
     }
-    if (newPw.length < 8) {
-      Alert.alert('Password too short', 'Password must be at least 8 characters.')
-      return
-    }
-    if (newPw !== confirmPw) {
-      Alert.alert('Passwords do not match', 'New password and confirmation must match.')
-      return
-    }
+    setPwErrors({})
     setSaving(true)
     try {
       const res = await changePassword({ current_password: currentPw, password: newPw, password_confirmation: confirmPw })
@@ -122,9 +122,10 @@ export default function ProfileScreen() {
         setEditName(user?.name || '')
         setEditEmail(user?.email || '')
         setEditPhone(user?.phone || '')
+        setEditErrors({})
         setEditVisible(true)
       }} />
-      <ActionRow label="Change password" note="Update your login password" onPress={() => setPwVisible(true)} />
+      <ActionRow label="Change password" note="Update your login password" onPress={() => { setPwErrors({}); setPwVisible(true) }} />
 
       <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
       <ActionRow label="Notification alerts" note="Managed via device settings" onPress={() => Alert.alert('Notifications', 'Manage notification permissions in your device Settings app.')} />
@@ -146,7 +147,15 @@ export default function ProfileScreen() {
           <Text style={styles.modalTitle}>Edit profile</Text>
 
           <Text style={styles.fieldLabel}>Full name</Text>
-          <TextInput value={editName} onChangeText={setEditName} style={styles.input} placeholder="Your name" placeholderTextColor={colors.muted} />
+          <TextInput
+            value={editName}
+            onChangeText={v => { setEditName(v); setEditErrors(p => { const n = { ...p }; delete n.name; return n }) }}
+            onBlur={() => { if (!editName.trim()) setEditErrors(p => ({ ...p, name: 'Name is required' })) }}
+            style={styles.input}
+            placeholder="Your name"
+            placeholderTextColor={colors.muted}
+          />
+          {editErrors.name ? <Text style={styles.fieldError}>{editErrors.name}</Text> : null}
 
           <Text style={styles.fieldLabel}>Email</Text>
           <TextInput value={editEmail} onChangeText={setEditEmail} style={styles.input} placeholder="you@example.com" placeholderTextColor={colors.muted} keyboardType="email-address" autoCapitalize="none" />
@@ -155,7 +164,7 @@ export default function ProfileScreen() {
           <TextInput value={editPhone} onChangeText={setEditPhone} style={styles.input} placeholder="+91 9876543210" placeholderTextColor={colors.muted} keyboardType="phone-pad" />
 
           <Pressable style={styles.saveButton} onPress={handleSaveProfile} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff7f1" /> : <Text style={styles.saveButtonText}>Save changes</Text>}
+            {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.saveButtonText}>Save changes</Text>}
           </Pressable>
           <Pressable style={styles.cancelButton} onPress={() => setEditVisible(false)}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -169,16 +178,43 @@ export default function ProfileScreen() {
           <Text style={styles.modalTitle}>Change password</Text>
 
           <Text style={styles.fieldLabel}>Current password</Text>
-          <TextInput value={currentPw} onChangeText={setCurrentPw} style={styles.input} secureTextEntry placeholder="Current password" placeholderTextColor={colors.muted} />
+          <TextInput
+            value={currentPw}
+            onChangeText={v => { setCurrentPw(v); setPwErrors(p => { const n = { ...p }; delete n.currentPw; return n }) }}
+            onBlur={() => { if (!currentPw) setPwErrors(p => ({ ...p, currentPw: 'Current password is required' })) }}
+            style={styles.input}
+            secureTextEntry
+            placeholder="Current password"
+            placeholderTextColor={colors.muted}
+          />
+          {pwErrors.currentPw ? <Text style={styles.fieldError}>{pwErrors.currentPw}</Text> : null}
 
           <Text style={styles.fieldLabel}>New password</Text>
-          <TextInput value={newPw} onChangeText={setNewPw} style={styles.input} secureTextEntry placeholder="Min. 8 characters" placeholderTextColor={colors.muted} />
+          <TextInput
+            value={newPw}
+            onChangeText={v => { setNewPw(v); setPwErrors(p => { const n = { ...p }; delete n.newPw; return n }) }}
+            onBlur={() => { if (newPw.length < 8) setPwErrors(p => ({ ...p, newPw: 'Password must be at least 8 characters' })) }}
+            style={styles.input}
+            secureTextEntry
+            placeholder="Min. 8 characters"
+            placeholderTextColor={colors.muted}
+          />
+          {pwErrors.newPw ? <Text style={styles.fieldError}>{pwErrors.newPw}</Text> : null}
 
           <Text style={styles.fieldLabel}>Confirm new password</Text>
-          <TextInput value={confirmPw} onChangeText={setConfirmPw} style={styles.input} secureTextEntry placeholder="Repeat new password" placeholderTextColor={colors.muted} />
+          <TextInput
+            value={confirmPw}
+            onChangeText={v => { setConfirmPw(v); setPwErrors(p => { const n = { ...p }; delete n.confirmPw; return n }) }}
+            onBlur={() => { if (confirmPw !== newPw) setPwErrors(p => ({ ...p, confirmPw: 'Passwords do not match' })) }}
+            style={styles.input}
+            secureTextEntry
+            placeholder="Repeat new password"
+            placeholderTextColor={colors.muted}
+          />
+          {pwErrors.confirmPw ? <Text style={styles.fieldError}>{pwErrors.confirmPw}</Text> : null}
 
           <Pressable style={styles.saveButton} onPress={handleChangePassword} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff7f1" /> : <Text style={styles.saveButtonText}>Update password</Text>}
+            {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.saveButtonText}>Update password</Text>}
           </Pressable>
           <Pressable style={styles.cancelButton} onPress={() => setPwVisible(false)}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -222,7 +258,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  avatarText: { color: '#fff7f1', fontSize: 30, fontWeight: '800' },
+  avatarText: { color: colors.onPrimary, fontSize: 30, fontWeight: '800' },
   name: { fontSize: 22, fontWeight: '900', color: colors.text },
   email: { color: colors.muted, marginTop: 4 },
   roleBadge: {
@@ -266,7 +302,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  signOutText: { color: '#fff7f1', fontWeight: '800' },
+  signOutText: { color: colors.onPrimary, fontWeight: '800' },
   deleteButton: {
     marginTop: spacing.sm,
     backgroundColor: 'transparent',
@@ -282,6 +318,7 @@ const styles = StyleSheet.create({
   modalContent: { padding: spacing.lg, paddingBottom: 48 },
   modalTitle: { fontSize: 24, fontWeight: '900', color: colors.text, marginBottom: spacing.lg },
   fieldLabel: { color: colors.text, fontWeight: '700', marginBottom: 6, marginTop: spacing.sm },
+  fieldError: { color: colors.danger, fontSize: 12, marginTop: 4 },
   input: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
@@ -297,7 +334,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  saveButtonText: { color: '#fff7f1', fontWeight: '800' },
+  saveButtonText: { color: colors.onPrimary, fontWeight: '800' },
   cancelButton: {
     marginTop: spacing.sm,
     paddingVertical: 14,

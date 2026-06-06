@@ -26,6 +26,7 @@ export default function BookingScreen() {
   const [loading, setLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const amount = useMemo(() => (selectedType === 'home_visit' ? consultationFee + 200 : selectedType === 'online' ? Math.max(349, consultationFee - 150) : consultationFee), [consultationFee, selectedType])
 
@@ -73,6 +74,44 @@ export default function BookingScreen() {
     }
   }, [route.params?.preselectedType])
 
+  function validateField(field: string, value: string) {
+    let msg = ''
+    if (field === 'reason') {
+      if (value.trim().length < 4) msg = 'Please describe the reason for your visit'
+    } else if (field === 'home_address') {
+      if (selectedType === 'home_visit' && !value.trim()) msg = 'Enter your home address'
+    } else if (field === 'coords') {
+      const lat = parseFloat(homeLatitude)
+      const lng = parseFloat(homeLongitude)
+      if (selectedType === 'home_visit' && (isNaN(lat) || isNaN(lng) || !homeLatitude.trim() || !homeLongitude.trim())) {
+        msg = 'Valid coordinates are required for home visits'
+      }
+    }
+    setErrors(prev => {
+      if (!msg) {
+        const next = { ...prev }
+        delete next[field]
+        return next
+      }
+      return { ...prev, [field]: msg }
+    })
+  }
+
+  function validateAll(): boolean {
+    const errs: Record<string, string> = {}
+    if (reason.trim().length < 4) errs.reason = 'Please describe the reason for your visit'
+    if (selectedType === 'home_visit') {
+      if (!homeAddress.trim()) errs.home_address = 'Enter your home address'
+      const lat = parseFloat(homeLatitude)
+      const lng = parseFloat(homeLongitude)
+      if (!homeLatitude.trim() || !homeLongitude.trim() || isNaN(lat) || isNaN(lng)) {
+        errs.coords = 'Valid coordinates are required for home visits'
+      }
+    }
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   async function handleProceed() {
     if (!selectedPet) {
       Alert.alert('Select a pet', 'Choose which pet this appointment is for.')
@@ -89,22 +128,7 @@ export default function BookingScreen() {
       return
     }
 
-    if (selectedType === 'home_visit' && !homeAddress.trim()) {
-      Alert.alert('Address required', 'Enter the home visit address before continuing.')
-      return
-    }
-
-    if (selectedType === 'home_visit' && (!homeLatitude.trim() || !homeLongitude.trim())) {
-      Alert.alert('Coordinates required', 'Enter the GPS coordinates for the home visit address.')
-      return
-    }
-
-    const lat = parseFloat(homeLatitude)
-    const lng = parseFloat(homeLongitude)
-    if (selectedType === 'home_visit' && (isNaN(lat) || isNaN(lng))) {
-      Alert.alert('Invalid coordinates', 'Enter valid decimal numbers for latitude and longitude.')
-      return
-    }
+    if (!validateAll()) return
 
     setLoading(true)
     try {
@@ -190,13 +214,23 @@ export default function BookingScreen() {
       {selectedType === 'home_visit' ? (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Home address</Text>
-          <TextInput value={homeAddress} onChangeText={setHomeAddress} multiline placeholder="Enter the full visit address" placeholderTextColor={colors.muted} style={styles.textArea} />
+          <TextInput
+            value={homeAddress}
+            onChangeText={v => { setHomeAddress(v); setErrors(p => { const n = { ...p }; delete n.home_address; return n }) }}
+            onBlur={() => validateField('home_address', homeAddress)}
+            multiline
+            placeholder="Enter the full visit address"
+            placeholderTextColor={colors.muted}
+            style={styles.textArea}
+          />
+          {errors.home_address ? <Text style={styles.fieldError}>{errors.home_address}</Text> : null}
           <Text style={styles.sectionTitle2}>GPS Coordinates</Text>
           <Text style={styles.helperText}>Required for vet routing. Open Google Maps → long-press your location → copy the coordinates.</Text>
           <View style={styles.rowWrap}>
             <TextInput
               value={homeLatitude}
-              onChangeText={setHomeLatitude}
+              onChangeText={v => { setHomeLatitude(v); setErrors(p => { const n = { ...p }; delete n.coords; return n }) }}
+              onBlur={() => validateField('coords', homeLatitude)}
               placeholder="Latitude (e.g. 28.6139)"
               placeholderTextColor={colors.muted}
               keyboardType="numeric"
@@ -204,13 +238,15 @@ export default function BookingScreen() {
             />
             <TextInput
               value={homeLongitude}
-              onChangeText={setHomeLongitude}
+              onChangeText={v => { setHomeLongitude(v); setErrors(p => { const n = { ...p }; delete n.coords; return n }) }}
+              onBlur={() => validateField('coords', homeLongitude)}
               placeholder="Longitude (e.g. 77.2090)"
               placeholderTextColor={colors.muted}
               keyboardType="numeric"
               style={[styles.coordInput, { flex: 1 }]}
             />
           </View>
+          {errors.coords ? <Text style={styles.fieldError}>{errors.coords}</Text> : null}
         </View>
       ) : null}
 
@@ -237,7 +273,16 @@ export default function BookingScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Reason for visit</Text>
-        <TextInput value={reason} onChangeText={setReason} multiline placeholder="What's bringing your pet in?" placeholderTextColor={colors.muted} style={styles.textArea} />
+        <TextInput
+          value={reason}
+          onChangeText={v => { setReason(v); setErrors(p => { const n = { ...p }; delete n.reason; return n }) }}
+          onBlur={() => validateField('reason', reason)}
+          multiline
+          placeholder="What's bringing your pet in?"
+          placeholderTextColor={colors.muted}
+          style={styles.textArea}
+        />
+        {errors.reason ? <Text style={styles.fieldError}>{errors.reason}</Text> : null}
       </View>
 
       <View style={styles.summaryCard}>
@@ -266,9 +311,9 @@ const styles = StyleSheet.create({
   pill: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   pillText: { color: colors.text, fontWeight: '700' },
-  pillTextActive: { color: '#fff7f1' },
+  pillTextActive: { color: colors.onPrimary },
   typeCard: { width: '31%', minWidth: 96, padding: 12, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSoft },
-  typeCardActive: { backgroundColor: '#fff1e8', borderColor: colors.primary },
+  typeCardActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   typeLabel: { fontWeight: '800', color: colors.text },
   typeLabelActive: { color: colors.primary },
   typeMeta: { marginTop: 6, color: colors.muted, fontSize: 12, lineHeight: 16 },
@@ -276,13 +321,13 @@ const styles = StyleSheet.create({
   slot: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
   slotActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   slotText: { color: colors.text, fontWeight: '700' },
-  slotTextActive: { color: '#fff7f1' },
+  slotTextActive: { color: colors.onPrimary },
   textArea: { minHeight: 100, padding: 14, borderRadius: radius.md, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border, color: colors.text, textAlignVertical: 'top' },
   dateChip: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSoft },
   dateChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   dateChipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
-  dateChipTextActive: { color: '#fff7f1' },
-  summaryCard: { backgroundColor: '#fff7f1', borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: '#f9dcc8' },
+  dateChipTextActive: { color: colors.onPrimary },
+  summaryCard: { backgroundColor: colors.onPrimary, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border },
   summaryLabel: { color: colors.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 8 },
   summaryValue: { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 2 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
@@ -291,4 +336,5 @@ const styles = StyleSheet.create({
   sectionTitle2: { fontSize: 14, fontWeight: '800', color: colors.text, marginTop: spacing.md, marginBottom: 4 },
   coordInput: { padding: 12, borderRadius: radius.md, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border, color: colors.text },
   error: { color: colors.danger, marginTop: 8 },
+  fieldError: { color: colors.danger, fontSize: 12, marginTop: 4 },
 })

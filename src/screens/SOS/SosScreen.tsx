@@ -7,8 +7,8 @@ import { normalizePet, pickArray } from '../../utils/backendAdapters'
 const URGENCY_LEVELS = [
   { value: 'low', label: 'Low', color: colors.accent, note: 'Can wait a few hours' },
   { value: 'medium', label: 'Medium', color: colors.warning, note: 'Needs care today' },
-  { value: 'high', label: 'High', color: '#ef4444', note: 'Urgent — needs help now' },
-  { value: 'critical', label: 'Critical', color: '#7f1d1d', note: 'Life-threatening emergency' },
+  { value: 'high', label: 'High', color: colors.danger, note: 'Urgent — needs help now' },
+  { value: 'critical', label: 'Critical', color: colors.danger, note: 'Life-threatening emergency' },
 ]
 
 export default function SosScreen() {
@@ -22,6 +22,7 @@ export default function SosScreen() {
   const [activeSos, setActiveSos] = useState<any>(null)
   const [polling, setPolling] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -71,25 +72,49 @@ export default function SosScreen() {
     }, 10000)
   }
 
+  function validateField(field: string, value: string) {
+    let msg = ''
+    if (field === 'description') {
+      if (value.trim().length < 10) msg = 'Please describe the emergency in more detail'
+    } else if (field === 'coords') {
+      const lat = parseFloat(latitude)
+      const lng = parseFloat(longitude)
+      if (!latitude.trim() || !longitude.trim() || isNaN(lat) || isNaN(lng)) {
+        msg = 'Location coordinates are required'
+      }
+    }
+    setErrors(prev => {
+      if (!msg) {
+        const next = { ...prev }
+        delete next[field]
+        return next
+      }
+      return { ...prev, [field]: msg }
+    })
+  }
+
+  function validateAll(): boolean {
+    const errs: Record<string, string> = {}
+    if (description.trim().length < 10) errs.description = 'Please describe the emergency in more detail'
+    const lat = parseFloat(latitude)
+    const lng = parseFloat(longitude)
+    if (!latitude.trim() || !longitude.trim() || isNaN(lat) || isNaN(lng)) {
+      errs.coords = 'Location coordinates are required'
+    }
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   async function handleSubmit() {
     if (!selectedPet) {
       Alert.alert('Select a pet', 'Choose which pet needs emergency help.')
       return
     }
-    if (!description.trim()) {
-      Alert.alert('Description required', 'Describe what is happening.')
-      return
-    }
-    if (!latitude.trim() || !longitude.trim()) {
-      Alert.alert('Location required', 'Enter GPS coordinates so a vet can reach you.')
-      return
-    }
+
+    if (!validateAll()) return
+
     const lat = parseFloat(latitude)
     const lng = parseFloat(longitude)
-    if (isNaN(lat) || isNaN(lng)) {
-      Alert.alert('Invalid coordinates', 'Enter valid decimal numbers for latitude and longitude.')
-      return
-    }
 
     setSubmitting(true)
     try {
@@ -165,12 +190,14 @@ export default function SosScreen() {
         <Text style={styles.sectionTitle}>What is happening?</Text>
         <TextInput
           value={description}
-          onChangeText={setDescription}
+          onChangeText={v => { setDescription(v); setErrors(p => { const n = { ...p }; delete n.description; return n }) }}
+          onBlur={() => validateField('description', description)}
           multiline
           placeholder="Describe symptoms, injuries, or what happened..."
           placeholderTextColor={colors.muted}
           style={styles.textArea}
         />
+        {errors.description ? <Text style={styles.fieldError}>{errors.description}</Text> : null}
       </View>
 
       <View style={styles.card}>
@@ -179,7 +206,8 @@ export default function SosScreen() {
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TextInput
             value={latitude}
-            onChangeText={setLatitude}
+            onChangeText={v => { setLatitude(v); setErrors(p => { const n = { ...p }; delete n.coords; return n }) }}
+            onBlur={() => validateField('coords', latitude)}
             placeholder="Latitude"
             placeholderTextColor={colors.muted}
             keyboardType="numeric"
@@ -187,17 +215,19 @@ export default function SosScreen() {
           />
           <TextInput
             value={longitude}
-            onChangeText={setLongitude}
+            onChangeText={v => { setLongitude(v); setErrors(p => { const n = { ...p }; delete n.coords; return n }) }}
+            onBlur={() => validateField('coords', longitude)}
             placeholder="Longitude"
             placeholderTextColor={colors.muted}
             keyboardType="numeric"
             style={[styles.coordInput, { flex: 1 }]}
           />
         </View>
+        {errors.coords ? <Text style={styles.fieldError}>{errors.coords}</Text> : null}
       </View>
 
       <Pressable style={styles.sosButton} onPress={handleSubmit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#fff7f1" /> : <Text style={styles.sosButtonText}>🚨 Send Emergency SOS</Text>}
+        {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.sosButtonText}>🚨 Send Emergency SOS</Text>}
       </Pressable>
 
       <Text style={styles.disclaimer}>
@@ -251,10 +281,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: 44 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  alertBanner: { backgroundColor: '#fef2f2', borderRadius: radius.xl, borderWidth: 1, borderColor: '#fecaca', padding: spacing.lg, flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: spacing.lg },
+  alertBanner: { backgroundColor: colors.dangerSoft, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.dangerBorder, padding: spacing.lg, flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: spacing.lg },
   alertIcon: { fontSize: 32 },
-  alertTitle: { fontWeight: '900', fontSize: 18, color: '#7f1d1d' },
-  alertMeta: { color: '#991b1b', fontSize: 12, marginTop: 2 },
+  alertTitle: { fontWeight: '900', fontSize: 18, color: colors.danger },
+  alertMeta: { color: colors.danger, fontSize: 12, marginTop: 2 },
   card: { backgroundColor: colors.surface, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
   urgencyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -267,15 +297,16 @@ const styles = StyleSheet.create({
   pill: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   pillText: { color: colors.text, fontWeight: '700' },
-  pillTextActive: { color: '#fff7f1' },
-  sosButton: { backgroundColor: '#dc2626', borderRadius: radius.lg, paddingVertical: 18, alignItems: 'center', marginTop: spacing.sm },
-  sosButtonText: { color: '#fff', fontWeight: '900', fontSize: 16 },
+  pillTextActive: { color: colors.onPrimary },
+  sosButton: { backgroundColor: colors.danger, borderRadius: radius.lg, paddingVertical: 18, alignItems: 'center', marginTop: spacing.sm },
+  sosButtonText: { color: colors.surface, fontWeight: '900', fontSize: 16 },
   disclaimer: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: spacing.md, textAlign: 'center' },
+  fieldError: { color: colors.danger, fontSize: 12, marginTop: 4 },
   // Active SOS
-  activeBanner: { backgroundColor: '#fef2f2', borderRadius: radius.xl, borderWidth: 1, borderColor: '#fca5a5', padding: spacing.lg, alignItems: 'center', marginBottom: spacing.lg },
+  activeBanner: { backgroundColor: colors.dangerSoft, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.dangerBorder, padding: spacing.lg, alignItems: 'center', marginBottom: spacing.lg },
   activeIcon: { fontSize: 48 },
-  activeTitle: { fontSize: 24, fontWeight: '900', color: '#7f1d1d', marginTop: 8 },
-  activeStatus: { color: '#dc2626', fontWeight: '800', marginTop: 6, letterSpacing: 1 },
+  activeTitle: { fontSize: 24, fontWeight: '900', color: colors.danger, marginTop: 8 },
+  activeStatus: { color: colors.danger, fontWeight: '800', marginTop: 6, letterSpacing: 1 },
   body: { color: colors.muted, lineHeight: 20 },
   phone: { color: colors.primary, fontWeight: '700', marginTop: 6 },
 })
