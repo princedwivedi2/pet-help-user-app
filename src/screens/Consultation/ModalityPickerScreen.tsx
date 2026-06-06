@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
+import ErrorCard from '../../components/ErrorCard'
 import { useNavigation } from '@react-navigation/native'
 import { colors, radius, spacing } from '../../theme'
 import { createConsultation, getPets } from '../../services'
@@ -13,9 +14,11 @@ const MODES = [
 export default function ModalityPickerScreen() {
   const nav = useNavigation<any>()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSelect(modality: 'video' | 'audio' | 'chat') {
     setLoading(true)
+    setError('')
     try {
       let petUuid: string | undefined
       try {
@@ -29,10 +32,10 @@ export default function ModalityPickerScreen() {
       if (consultationId) {
         nav.navigate('ConsultationRoom', { consultationId, modality, vetName: 'Available vet' })
       } else {
-        Alert.alert('Could not start', res?.message || 'Unable to start consultation')
+        setError(res?.message || 'Unable to start consultation. Please try again.')
       }
     } catch (e) {
-      Alert.alert('Error', String(e))
+      setError(String(e))
     } finally {
       setLoading(false)
     }
@@ -43,6 +46,7 @@ export default function ModalityPickerScreen() {
       <Text style={styles.title}>Start a Consultation</Text>
       <Text style={styles.subtitle}>Choose how you&apos;d like to connect</Text>
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} /> : null}
+      {error ? <ErrorCard message={error} onRetry={() => setError('')} /> : null}
       {MODES.map(m => (
         <Pressable
           key={m.value}

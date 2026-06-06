@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { View, Text, Pressable, ActivityIndicator, Alert, StyleSheet, TextInput, ScrollView } from 'react-native'
+import { View, Text, Pressable, ActivityIndicator, StyleSheet, TextInput, ScrollView } from 'react-native'
+import ErrorCard from '../../components/ErrorCard'
 import { createPaymentOrder, verifyPayment } from '../../services'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { colors, radius, spacing } from '../../theme'
@@ -14,6 +15,8 @@ export default function PaymentScreen() {
   }
   const [loading, setLoading] = useState(false)
   const [order, setOrder] = useState<any | null>(null)
+  const [orderError, setOrderError] = useState('')
+  const [verifyError, setVerifyError] = useState('')
   const [paymentId, setPaymentId] = useState('')
   const [signature, setSignature] = useState('')
   const [checkoutLoaded, setCheckoutLoaded] = useState(false)
@@ -21,34 +24,40 @@ export default function PaymentScreen() {
 
   const orderAmount = useMemo(() => Math.round(order?.amount || amount || 0), [amount, order?.amount])
 
-  useEffect(() => {
-    async function createOrder() {
-      if (!appointmentId) {
-        Alert.alert('Missing appointment', 'No appointment id was passed to payment.')
-        return
-      }
-      setLoading(true)
-      try {
-        const res = await createPaymentOrder({ payable_type: 'appointment', payable_uuid: appointmentId, payment_model: 'platform_fee', amount })
-        if (res?.data) setOrder((res.data as any).payment || res.data)
-        else Alert.alert('Order failed', res?.message || 'Unable to create order')
-      } catch (e) {
-        Alert.alert('Order error', String(e))
-      } finally {
-        setLoading(false)
-      }
+  async function createOrder() {
+    if (!appointmentId) {
+      setOrderError('No appointment id was passed to payment.')
+      return
     }
+    setLoading(true)
+    setOrderError('')
+    try {
+      const res = await createPaymentOrder({ payable_type: 'appointment', payable_uuid: appointmentId, payment_model: 'platform_fee', amount })
+      if (res?.data) setOrder((res.data as any).payment || res.data)
+      else setOrderError(res?.message || 'Unable to start payment. Try again.')
+    } catch (e) {
+      setOrderError(String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     createOrder()
   }, [appointmentId, amount])
 
   async function handleVerifyPayment() {
-    if (!order) return Alert.alert('No order', 'Order not created')
+    if (!order) {
+      setVerifyError('Order not created.')
+      return
+    }
     if (!paymentId.trim() || !signature.trim()) {
-      Alert.alert('Missing payment details', 'Enter the payment id and signature from checkout.')
+      setVerifyError('Enter the payment id and signature from checkout.')
       return
     }
 
     setLoading(true)
+    setVerifyError('')
     try {
       const paymentUuid = order.payment_uuid || order.uuid || order.id
       const orderId = order.razorpay_order_id || order.order_id || order.id
@@ -69,10 +78,10 @@ export default function PaymentScreen() {
           consultationId,
         })
       } else {
-        Alert.alert('Verification failed', res?.message || 'Payment verification failed')
+        setVerifyError(res?.message || 'Payment verification failed.')
       }
     } catch (e) {
-      Alert.alert('Payment error', String(e))
+      setVerifyError(String(e))
     } finally {
       setLoading(false)
     }
@@ -145,6 +154,8 @@ export default function PaymentScreen() {
       <Text style={styles.title}>Payment</Text>
       <Text style={styles.subtitle}>Complete checkout for the appointment, then verify the returned payment details.</Text>
 
+      {orderError ? <ErrorCard message={orderError} onRetry={createOrder} /> : null}
+
       {order ? (
         <View style={styles.card}>
           <Text style={styles.label}>Appointment</Text>
@@ -180,9 +191,11 @@ export default function PaymentScreen() {
           </View>
 
           <Text style={styles.label}>Razorpay payment id</Text>
-          <TextInput value={paymentId} onChangeText={setPaymentId} placeholder="pay_..." placeholderTextColor={colors.muted} style={styles.input} autoCapitalize="none" />
+          <TextInput value={paymentId} onChangeText={v => { setPaymentId(v); setVerifyError('') }} placeholder="pay_..." placeholderTextColor={colors.muted} style={styles.input} autoCapitalize="none" />
           <Text style={styles.label}>Razorpay signature</Text>
-          <TextInput value={signature} onChangeText={setSignature} placeholder="signature" placeholderTextColor={colors.muted} style={styles.input} autoCapitalize="none" />
+          <TextInput value={signature} onChangeText={v => { setSignature(v); setVerifyError('') }} placeholder="signature" placeholderTextColor={colors.muted} style={styles.input} autoCapitalize="none" />
+
+          {verifyError ? <ErrorCard message={verifyError} onRetry={handleVerifyPayment} /> : null}
 
           <Pressable style={styles.button} onPress={handleVerifyPayment}>
             <Text style={styles.buttonText}>{checkoutDone ? 'Verify again' : 'Verify payment'}</Text>
@@ -190,7 +203,7 @@ export default function PaymentScreen() {
           <Text style={styles.helper}>Use the checkout above or paste the payment callback values and verify them with the server.</Text>
         </View>
       ) : (
-        <Text style={styles.empty}>No order created yet.</Text>
+        !orderError ? <Text style={styles.empty}>No order created yet.</Text> : null
       )}
     </ScrollView>
   )
@@ -207,7 +220,7 @@ const styles = StyleSheet.create({
   value: { color: colors.text, fontWeight: '700', marginTop: 4 },
   amount: { color: colors.primary, fontWeight: '900', fontSize: 28, marginTop: 4 },
   button: { marginTop: spacing.lg, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
-  buttonText: { color: '#fff7f1', fontWeight: '800' },
+  buttonText: { color: colors.onPrimary, fontWeight: '800' },
   empty: { color: colors.muted, marginTop: 20 },
   helper: { color: colors.muted, marginTop: 10, lineHeight: 18 },
   checkoutWrap: { height: 280, marginTop: spacing.md, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },

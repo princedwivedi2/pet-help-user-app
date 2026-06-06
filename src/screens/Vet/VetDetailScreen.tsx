@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import PrimaryButton from '../../components/PrimaryButton'
+import ErrorCard from '../../components/ErrorCard'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { getVet, getReviewsForVet } from '../../services'
 import { colors, radius, spacing } from '../../theme'
@@ -11,24 +12,27 @@ export default function VetDetailScreen() {
   const route = useRoute<any>()
   const [vet, setVet] = useState<any>(route.params?.vet ? normalizeVet(route.params.vet) : null)
   const [loading, setLoading] = useState(!route.params?.vet)
+  const [loadError, setLoadError] = useState('')
   const [reviews, setReviews] = useState<any[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [avgRating, setAvgRating] = useState<number | null>(null)
 
-  useEffect(() => {
-    async function loadVet() {
-      if (!route.params?.vetId || route.params?.vet) return
-      setLoading(true)
-      try {
-        const res = await getVet(route.params.vetId)
-        const data = res?.data as any
-        setVet(normalizeVet(data?.vet || data || {}, 0))
-      } catch {
-        Alert.alert('Vet unavailable', 'Unable to load this vet profile right now.')
-      } finally {
-        setLoading(false)
-      }
+  async function loadVet() {
+    if (!route.params?.vetId || route.params?.vet) return
+    setLoading(true)
+    setLoadError('')
+    try {
+      const res = await getVet(route.params.vetId)
+      const data = res?.data as any
+      setVet(normalizeVet(data?.vet || data || {}, 0))
+    } catch {
+      setLoadError('Unable to load this vet profile right now.')
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     loadVet()
   }, [route.params?.vet, route.params?.vetId])
 
@@ -52,7 +56,23 @@ export default function VetDetailScreen() {
     if (vet) loadReviews()
   }, [vet, route.params?.vetId])
 
-  if (loading || !vet) {
+  if (loading) {
+    return (
+      <View style={[styles.screen, styles.centered]}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.screen, styles.centered, { padding: spacing.lg }]}>
+        <ErrorCard message={loadError} onRetry={loadVet} />
+      </View>
+    )
+  }
+
+  if (!vet) {
     return (
       <View style={[styles.screen, styles.centered]}>
         <ActivityIndicator color={colors.primary} />
@@ -181,13 +201,13 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: spacing.lg, paddingBottom: 48 },
   heroCard: { backgroundColor: colors.primary, borderRadius: 28, padding: spacing.lg, marginBottom: spacing.lg },
-  name: { color: '#fff7f1', fontSize: 28, fontWeight: '800' },
-  clinic: { color: '#fff7f1', fontSize: 16, marginTop: 4, opacity: 0.95 },
+  name: { color: colors.onPrimary, fontSize: 28, fontWeight: '800' },
+  clinic: { color: colors.onPrimary, fontSize: 16, marginTop: 4, opacity: 0.95 },
   meta: { color: 'rgba(255,247,241,0.9)', marginTop: 6 },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: spacing.lg },
   statCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: radius.md, padding: 12 },
   statLabel: { color: 'rgba(255,247,241,0.8)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8 },
-  statValue: { color: '#fff7f1', fontSize: 18, fontWeight: '800', marginTop: 4 },
+  statValue: { color: colors.onPrimary, fontSize: 18, fontWeight: '800', marginTop: 4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.lg },
   chip: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10 },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
