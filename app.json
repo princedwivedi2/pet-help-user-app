@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "RESPAW",
+    "slug": "respaw-user-app",
+    "scheme": "respaw",
+    "orientation": "portrait",
+    "version": "1.0.0",
+    "userInterfaceStyle": "light",
+    "extra": {
+      "apiUrl": "http://192.168.1.26:8002/api/v1"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-secure-store"
+    ]
+  }
+}
