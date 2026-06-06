@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wordmark: {
-    color: '#fff7f1',
+    color: colors.onPrimary,
     fontSize: 58,
     lineHeight: 60,
     fontWeight: '800',
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     marginTop: spacing.sm,
-    color: '#fff7f1',
+    color: colors.onPrimary,
     fontSize: 14,
     fontWeight: '500',
   },

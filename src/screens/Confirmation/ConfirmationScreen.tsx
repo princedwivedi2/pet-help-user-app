@@ -94,9 +94,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
-  checkmark: { fontSize: 48, color: '#fff7f1' },
-  heroTitle: { color: '#fff7f1', fontSize: 26, fontWeight: '800', marginTop: 8 },
-  heroSubtitle: { color: '#fff7f1', opacity: 0.9, marginTop: 6, fontSize: 15 },
+  checkmark: { fontSize: 48, color: colors.onPrimary },
+  heroTitle: { color: colors.onPrimary, fontSize: 26, fontWeight: '800', marginTop: 8 },
+  heroSubtitle: { color: colors.onPrimary, opacity: 0.9, marginTop: 6, fontSize: 15 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,

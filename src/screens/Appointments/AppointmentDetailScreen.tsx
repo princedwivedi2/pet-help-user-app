@@ -7,8 +7,8 @@ import ErrorCard from '../../components/ErrorCard'
 import { getAppointment, cancelAppointment } from '../../services/appointments'
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
-  pending: { bg: '#fef3c7', text: '#d97706' },
-  confirmed: { bg: '#fff0e6', text: colors.primary },
+  pending: { bg: colors.sky, text: colors.warning },
+  confirmed: { bg: colors.primarySoft, text: colors.primary },
   completed: { bg: colors.mint, text: colors.accent },
   cancelled: { bg: colors.dangerSoft, text: colors.danger },
 }
