@@ -24,6 +24,8 @@ import BlogPostScreen from '../screens/Blog/BlogPostScreen'
 import PrescriptionsScreen from '../screens/Pets/PrescriptionsScreen'
 import SubscriptionPlansScreen from '../screens/Subscription/SubscriptionPlansScreen'
 import ChatScreen from '../screens/Chat/ChatScreen'
+import { Ionicons } from '@expo/vector-icons'
+import { colors } from '../theme'
 import { AuthProvider } from '../contexts/AuthProvider'
 
 const Stack = createNativeStackNavigator()
@@ -32,12 +34,24 @@ const Tab = createBottomTabNavigator()
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#ff6b2c',
-        tabBarInactiveTintColor: '#64748b',
-        tabBarStyle: { backgroundColor: '#fff7f1', borderTopColor: '#f4e3d5' },
-      }}
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.border },
+        tabBarIcon: ({ focused, color, size }) => {
+          type IoniconsName = React.ComponentProps<typeof Ionicons>['name']
+          const iconMap: Record<string, [IoniconsName, IoniconsName]> = {
+            Home: ['home', 'home-outline'],
+            Search: ['search', 'search-outline'],
+            Bookings: ['calendar', 'calendar-outline'],
+            Pets: ['paw', 'paw-outline'],
+            Profile: ['person', 'person-outline'],
+          }
+          const [active, inactive] = iconMap[route.name] ?? ['help-circle', 'help-circle-outline']
+          return <Ionicons name={focused ? active : inactive} size={size} color={color} />
+        },
+      })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
