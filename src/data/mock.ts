@@ -37,9 +37,8 @@ export type Article = {
 };
 
 export const quickActions = [
-  { id: 'sos', label: 'SOS', emoji: '🚨', note: 'Urgent help' },
   { id: 'consult', label: 'Consult', emoji: '💬', note: 'Start now' },
-  { id: 'book', label: 'Book Visit', emoji: '📅', note: 'Clinic/home' },
+  { id: 'book', label: 'Book Visit', emoji: '📅', note: 'Clinic/online' },
   { id: 'records', label: 'Records', emoji: '🗂️', note: 'Prescriptions' },
 ];
 

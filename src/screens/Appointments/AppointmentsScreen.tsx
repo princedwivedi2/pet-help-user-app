@@ -7,6 +7,7 @@ import { cancelAppointment, getAppointments, createReview } from '../../services
 import { useNavigation } from '@react-navigation/native'
 import { colors, radius, spacing } from '../../theme'
 import { normalizeAppointment, pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
 
 export default function AppointmentsScreen() {
   const nav = useNavigation<any>()
@@ -44,8 +45,8 @@ export default function AppointmentsScreen() {
         const list = pickArray(pastRes.value?.data, ['appointments', 'items']).map((appt, i) => normalizeAppointment(appt, i))
         setPast(list)
       }
-    } catch {
-      setError('Unable to load. Check your connection and try again.')
+    } catch (e) {
+      setError(parseApiError(e))
     } finally {
       setLoading(false)
     }
@@ -72,8 +73,8 @@ export default function AppointmentsScreen() {
       setCancelTarget(null)
       setCancelReason('')
       refetch()
-    } catch {
-      Alert.alert('Error', 'Could not cancel appointment. Please try again.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     } finally {
       setCancelling(false)
     }
@@ -99,8 +100,8 @@ export default function AppointmentsScreen() {
       setReviewTarget(null)
       setReviewComment('')
       setRating(5)
-    } catch {
-      Alert.alert('Error', 'Could not submit review. Please try again.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     } finally {
       setSubmittingReview(false)
     }

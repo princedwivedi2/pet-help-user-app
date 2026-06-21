@@ -29,3 +29,7 @@ export async function sendConsultationMessage(uuid: string, content: string) {
     body: JSON.stringify({ content }),
   })
 }
+
+export async function completeConsultation(uuid: string) {
+  return request(`/consultations/${uuid}/complete`, { method: 'POST' })
+}

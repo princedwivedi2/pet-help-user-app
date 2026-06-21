@@ -21,8 +21,14 @@ export default function SplashScreen() {
           return
         }
 
-        await Promise.all([delay, me()])
-        if (mounted.current) navigation.replace('Main')
+        const [, res] = await Promise.all([delay, me()])
+        if (res?.data) {
+          if (mounted.current) navigation.replace('Main')
+          return
+        }
+
+        await SecureStore.deleteItemAsync('authToken')
+        if (mounted.current) navigation.replace('Auth.Login')
       } catch {
         await delay
         if (mounted.current) navigation.replace('Auth.Login')

@@ -6,12 +6,68 @@
     "orientation": "portrait",
     "version": "1.0.0",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "extra": {
-      "apiUrl": "http://192.168.1.26:8002/api/v1"
+      "apiUrl": "http://10.253.208.41:8002/api/v1"
     },
     "plugins": [
       "expo-asset",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#fff7f1"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow RESPAW to access your photos so you can set a picture for your pet.",
+          "cameraPermission": "Allow RESPAW to use the camera so you can take a photo of your pet."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ff6b2c",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow RESPAW to use your location to find vet clinics near you."
+        }
+      ]
+    ],
+    "android": {
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ff6b2c"
+      },
+      "package": "com.anonymous.respawuserapp"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
   }
 }

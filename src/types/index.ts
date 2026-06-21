@@ -13,11 +13,11 @@ export type RootStackParamList = {
   Splash: undefined
   'Auth.Login': undefined
   Main: undefined
+  NearbyVets: undefined
   VetDetail: { vetId?: string; vet?: any }
   Booking: { vetId?: string; vet?: any }
   Payment: { appointmentId: string; amount: number; appointment?: any; vetName?: string }
   Notifications: undefined
-  SOS: undefined
   PetRecords: { petId: string; pet?: any }
   Blog: undefined
   Subscriptions: undefined

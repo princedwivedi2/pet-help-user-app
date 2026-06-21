@@ -1,10 +1,13 @@
 import React, { useState } from 'react'
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, StyleSheet, Modal } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
 import { useAuth } from '../../contexts/AuthProvider'
 import { updateProfile, changePassword, deleteAccount } from '../../services'
 import { colors, radius, spacing } from '../../theme'
+import { parseApiError, getValidationErrors } from '../../utils/apiError'
 
 export default function ProfileScreen() {
+  const nav = useNavigation<any>()
   const { signOut, user, refreshUser } = useAuth()
   const [editVisible, setEditVisible] = useState(false)
   const [pwVisible, setPwVisible] = useState(false)
@@ -38,8 +41,10 @@ export default function ProfileScreen() {
       await refreshUser()
       setEditVisible(false)
       Alert.alert('Profile updated', 'Your profile has been saved.')
-    } catch {
-      Alert.alert('Error', 'Could not update profile. Please try again.')
+    } catch (e) {
+      const fieldErrs = getValidationErrors(e)
+      if (Object.keys(fieldErrs).length) setEditErrors(fieldErrs)
+      else Alert.alert('Error', parseApiError(e))
     } finally {
       setSaving(false)
     }
@@ -67,8 +72,8 @@ export default function ProfileScreen() {
       setConfirmPw('')
       setPwVisible(false)
       Alert.alert('Password changed', 'Your password has been updated.')
-    } catch {
-      Alert.alert('Error', 'Could not change password. Please try again.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     } finally {
       setSaving(false)
     }
@@ -127,11 +132,16 @@ export default function ProfileScreen() {
       }} />
       <ActionRow label="Change password" note="Update your login password" onPress={() => { setPwErrors({}); setPwVisible(true) }} />
 
+      <Text style={styles.sectionLabel}>PAYMENTS</Text>
+      <ActionRow label="Wallet & payments" note="Balance and transaction history" onPress={() => nav.navigate('Wallet')} />
+      <ActionRow label="Payment history" note="View past payments and refund status" onPress={() => nav.navigate('PaymentHistory')} />
+
       <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
       <ActionRow label="Notification alerts" note="Managed via device settings" onPress={() => Alert.alert('Notifications', 'Manage notification permissions in your device Settings app.')} />
 
       <Text style={styles.sectionLabel}>SUPPORT</Text>
       <ActionRow label="Help & support" note="24/7 help center" onPress={() => Alert.alert('Support', 'Contact us at support@respaw.app')} />
+      <ActionRow label="Server settings" note="Change the backend URL" onPress={() => nav.navigate('ServerSettings')} />
 
       <Text style={styles.sectionLabel}>DANGER ZONE</Text>
       <Pressable style={styles.signOutButton} onPress={handleSignOut}>

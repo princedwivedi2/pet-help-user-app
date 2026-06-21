@@ -14,8 +14,8 @@ import { pickArray } from '../../utils/adapters'
 import {
   getSubscriptionPlans,
   getActiveSubscription,
-  createSubscriptionOrder,
 } from '../../services/subscriptions'
+import { parseApiError } from '../../utils/apiError'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
 import PrimaryButton from '../../components/PrimaryButton'
@@ -44,8 +44,8 @@ export default function SubscriptionPlansScreen() {
       setActive(activeData && typeof activeData === 'object' && !Array.isArray(activeData)
         ? activeData
         : null)
-    } catch {
-      setError('Unable to load. Check your connection and try again.')
+    } catch (e) {
+      setError(parseApiError(e))
     } finally {
       setLoading(false)
     }
@@ -63,17 +63,12 @@ export default function SubscriptionPlansScreen() {
         { text: 'Cancel' },
         {
           text: 'Subscribe',
-          onPress: async () => {
-            try {
-              const order = await createSubscriptionOrder(plan.uuid)
-              nav.navigate('Payment', {
-                payable_type: 'subscription',
-                order,
-                plan,
-              })
-            } catch {
-              Alert.alert('Error', 'Unable to start payment. Try again.')
-            }
+          onPress: () => {
+            nav.navigate('Payment', {
+              subscriptionPlanUuid: plan.uuid,
+              amount: plan.price ?? plan.amount ?? plan.monthly_price,
+              vetName: plan.name ?? plan.plan_name,
+            })
           },
         },
       ],

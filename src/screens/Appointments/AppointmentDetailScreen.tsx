@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { colors, radius, spacing } from '../../theme'
 import ErrorCard from '../../components/ErrorCard'
 import { getAppointment, cancelAppointment } from '../../services/appointments'
+import { createReview, getReviewsForVet } from '../../services'
+import { pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   pending: { bg: colors.sky, text: colors.warning },
@@ -40,6 +43,10 @@ export default function AppointmentDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [data, setData] = useState<any>(routeAppt ?? null)
+  const [existingReview, setExistingReview] = useState<any>(null)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
 
   const refetch = useCallback(async () => {
     setLoading(true)
@@ -47,14 +54,45 @@ export default function AppointmentDetailScreen() {
     try {
       const res = await getAppointment(appointmentId)
       setData(res?.data ?? res)
-    } catch {
-      setError('Unable to load. Check your connection and try again.')
+    } catch (e) {
+      setError(parseApiError(e))
     } finally {
       setLoading(false)
     }
   }, [appointmentId])
 
   useEffect(() => { refetch() }, [refetch])
+
+  useEffect(() => {
+    async function loadReview() {
+      const vetUuid = data?.appointment?.vet?.uuid ?? data?.vet?.uuid ?? data?.vet_uuid
+      if (!vetUuid) return
+      try {
+        const res = await getReviewsForVet(vetUuid)
+        const list = pickArray(res?.data, ['reviews', 'items'])
+        const mine = list.find((r: any) => r.appointment_uuid === appointmentId || r.appointment?.uuid === appointmentId)
+        if (mine) setExistingReview(mine)
+      } catch { /* non-fatal */ }
+    }
+    if (data) loadReview()
+  }, [data, appointmentId])
+
+  async function handleSubmitReview() {
+    if (reviewRating === 0) {
+      Alert.alert('Rating required', 'Please select a star rating.')
+      return
+    }
+    setSubmittingReview(true)
+    try {
+      await createReview({ appointment_uuid: appointmentId ?? '', rating: reviewRating, comment: reviewComment || '' })
+      setExistingReview({ rating: reviewRating, comment: reviewComment })
+      Alert.alert('Review submitted', 'Thanks for your feedback!')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
 
   const appt = data?.appointment ?? data ?? {}
   const raw = appt.raw ?? appt
@@ -137,11 +175,67 @@ export default function AppointmentDetailScreen() {
             <DetailRow label="Payment status" value={paymentStatus || 'Pending'} />
           </View>
 
+          {/* Review card — only for completed appointments */}
+          {status === 'completed' ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Your Review</Text>
+              {existingReview ? (
+                <View>
+                  <View style={styles.starRow}>
+                    {[1,2,3,4,5].map(s => (
+                      <Text key={s} style={{ fontSize: 20, color: s <= existingReview.rating ? colors.warning : colors.border }}>★</Text>
+                    ))}
+                  </View>
+                  {existingReview.comment ? <Text style={styles.reviewCommentText}>{existingReview.comment}</Text> : null}
+                  <Text style={styles.reviewSubmittedLabel}>Review submitted ✓</Text>
+                </View>
+              ) : (
+                <View>
+                  <Text style={styles.detailLabel}>Tap to rate your experience</Text>
+                  <View style={styles.starRow}>
+                    {[1,2,3,4,5].map(s => (
+                      <Pressable key={s} onPress={() => setReviewRating(s)} hitSlop={8}>
+                        <Text style={{ fontSize: 28, color: s <= reviewRating ? colors.warning : colors.border }}>★</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <TextInput
+                    style={styles.reviewInput}
+                    placeholder="Share your experience (optional)"
+                    placeholderTextColor={colors.muted}
+                    value={reviewComment}
+                    onChangeText={setReviewComment}
+                    multiline
+                    maxLength={500}
+                  />
+                  <Pressable
+                    style={[styles.actionBtn, styles.rescheduleBtn, submittingReview && { opacity: 0.6 }]}
+                    onPress={handleSubmitReview}
+                    disabled={submittingReview}
+                  >
+                    {submittingReview
+                      ? <ActivityIndicator size="small" color={colors.primary} />
+                      : <Text style={styles.rescheduleBtnText}>Submit Review</Text>
+                    }
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          ) : null}
+
           {/* Actions card */}
           {(status === 'pending' || status === 'confirmed') ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Actions</Text>
-              <Pressable style={[styles.actionBtn, styles.rescheduleBtn]}>
+              <Pressable
+                style={[styles.actionBtn, styles.rescheduleBtn]}
+                onPress={() =>
+                  Alert.alert(
+                    'Reschedule',
+                    'To reschedule, please cancel this appointment and book a new time slot.',
+                  )
+                }
+              >
                 <Text style={styles.rescheduleBtnText}>Reschedule appointment</Text>
               </Pressable>
               <Pressable style={[styles.actionBtn, styles.cancelBtn]} onPress={handleCancel}>
@@ -197,4 +291,17 @@ const styles = StyleSheet.create({
   rescheduleBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
   cancelBtn: { borderColor: colors.danger },
   cancelBtnText: { color: colors.danger, fontWeight: '700', fontSize: 14 },
+  starRow: { flexDirection: 'row', gap: 6, marginVertical: spacing.sm },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    color: colors.text,
+    minHeight: 72,
+    textAlignVertical: 'top',
+    marginBottom: spacing.sm,
+  },
+  reviewCommentText: { color: colors.muted, lineHeight: 20, marginTop: spacing.xs },
+  reviewSubmittedLabel: { color: colors.accent, fontWeight: '700', marginTop: spacing.xs, fontSize: 13 },
 })

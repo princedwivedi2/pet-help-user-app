@@ -4,17 +4,18 @@ import VetCard from '../../components/VetCard'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
 import { useNavigation } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
 import { getVets } from '../../services'
 import { colors, radius, spacing } from '../../theme'
 import { normalizeVet, pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
 
-type FilterKey = 'emergency' | 'available' | 'rating' | 'homeVisit' | 'online'
+type FilterKey = 'emergency' | 'available' | 'rating' | 'online'
 
 const FILTERS: { key: FilterKey; label: string; param: string }[] = [
   { key: 'emergency', label: 'Emergency', param: 'emergency_only=true' },
   { key: 'available', label: 'Available now', param: 'available_only=true' },
   { key: 'rating', label: 'Rating 4.5+', param: 'min_rating=4.5' },
-  { key: 'homeVisit', label: 'Home visit', param: 'home_visit_available=true' },
   { key: 'online', label: 'Online', param: 'online_available=true' },
 ]
 
@@ -53,8 +54,8 @@ export default function SearchScreen() {
         const data = res?.data as any
         const list = pickArray(data, ['vets', 'nearby_vets', 'all_vets', 'city_vets']).map((vet, index) => normalizeVet(vet, index))
         setVets(list)
-      } catch {
-        setError('Unable to load. Check your connection and try again.')
+      } catch (e) {
+        setError(parseApiError(e))
         setVets([])
       } finally {
         setLoading(false)
@@ -107,8 +108,12 @@ export default function SearchScreen() {
 
       <View style={styles.resultsHeader}>
         <Text style={styles.sectionTitle}>Results</Text>
-        <Text style={styles.sectionMeta}>{loading ? 'Loading…' : `${data.length} vets`}</Text>
+        <Pressable style={styles.mapToggle} onPress={() => nav.navigate('NearbyVets')}>
+          <Ionicons name="map-outline" size={15} color={colors.primary} />
+          <Text style={styles.mapToggleText}>Map</Text>
+        </Pressable>
       </View>
+      <Text style={styles.sectionMeta}>{loading ? 'Loading…' : `${data.length} vets`}</Text>
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} /> : null}
 
@@ -159,8 +164,20 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
   chipTextActive: { color: colors.onPrimary },
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  mapToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  mapToggleText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
-  sectionMeta: { color: colors.muted },
+  sectionMeta: { color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.sm },
   resultCard: { marginBottom: spacing.sm },
 })

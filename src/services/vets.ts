@@ -23,6 +23,27 @@ export async function getVets(query = '') {
   return request<VetListPayload>(`/vets${suffix}`)
 }
 
+/**
+ * Geo search for nearby vets. Uses the existing `GET /vets` endpoint, which
+ * accepts `lat`, `lng`, `radius_km` (1–100) and `sort_by=distance` and returns
+ * `nearby_vets[]` / `city_vets[]` / `all_vets[]` buckets.
+ */
+export async function getNearbyVets(opts: {
+  lat: number
+  lng: number
+  radiusKm?: number
+  limit?: number
+}) {
+  const params = new URLSearchParams({
+    lat: String(opts.lat),
+    lng: String(opts.lng),
+    radius_km: String(opts.radiusKm ?? 10),
+    sort_by: 'distance',
+    limit: String(opts.limit ?? 50),
+  })
+  return request<VetListPayload>(`/vets?${params.toString()}`)
+}
+
 export async function getVet(vetUuid: string) {
   return request<VetDetailPayload>(`/vets/${vetUuid}`)
 }
@@ -34,7 +55,7 @@ export async function getReviewsForVet(vetUuid: string) {
 export async function createReview(payload: {
   appointment_uuid: string
   rating: number
-  comment: string
+  comment?: string
 }) {
   return request('/reviews', { method: 'POST', body: JSON.stringify(payload) })
 }

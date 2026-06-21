@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
-import { quickActions, vetHighlights, pets, appointments, articles } from '../../data/mock'
+import { quickActions } from '../../data/mock'
 import QuickAction from '../../components/QuickAction'
 import VetCard from '../../components/VetCard'
 import PetCard from '../../components/PetCard'
@@ -8,34 +8,39 @@ import AppointmentCard from '../../components/AppointmentCard'
 import ErrorCard from '../../components/ErrorCard'
 import { useNavigation } from '@react-navigation/native'
 import { useAuth } from '../../contexts/AuthProvider'
-import { getAppointments, getBlogPosts, getPets, getVets, getUnreadNotificationCount } from '../../services'
+import { getAppointments, getBlogPosts, getPets, getVets, getUnreadNotificationCount, resendVerificationEmail, getAdBanners } from '../../services'
+import { parseApiError } from '../../utils/apiError'
 import { colors, radius, spacing } from '../../theme'
 import { normalizeAppointment, normalizePet, normalizeVet, pickArray } from '../../utils/backendAdapters'
 
 export default function HomeScreen() {
   const nav = useNavigation<any>()
   const { user } = useAuth()
-  const firstName = user?.name?.split(' ')[0] || 'Aanya'
+  const firstName = user?.name?.split(' ')[0] || 'there'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
-  const [vetFeed, setVetFeed] = useState<any[]>(vetHighlights)
-  const [petFeed, setPetFeed] = useState<any[]>(pets)
-  const [appointmentFeed, setAppointmentFeed] = useState<any[]>(appointments)
-  const [articleFeed, setArticleFeed] = useState<any[]>(articles)
+  const [vetFeed, setVetFeed] = useState<any[]>([])
+  const [petFeed, setPetFeed] = useState<any[]>([])
+  const [appointmentFeed, setAppointmentFeed] = useState<any[]>([])
+  const [articleFeed, setArticleFeed] = useState<any[]>([])
+  const [banners, setBanners] = useState<any[]>([])
   const [nearbyVetCount, setNearbyVetCount] = useState<string>('—')
   const [upcomingCount, setUpcomingCount] = useState<string>('—')
   const [unreadNotifs, setUnreadNotifs] = useState(0)
+  const [resendingVerify, setResendingVerify] = useState(false)
+  const [verifyResent, setVerifyResent] = useState(false)
 
   const loadHome = useCallback(async () => {
     setLoading(true)
     setError(false)
     try {
-        const [vetsRes, petsRes, appointmentsRes, postsRes, notifsRes] = await Promise.allSettled([
+        const [vetsRes, petsRes, appointmentsRes, postsRes, notifsRes, bannersRes] = await Promise.allSettled([
           getVets('limit=5'),
           getPets(),
           getAppointments('per_page=5'),
           getBlogPosts('per_page=3'),
           getUnreadNotificationCount(),
+          getAdBanners(),
         ])
 
         if (notifsRes.status === 'fulfilled') {
@@ -76,8 +81,16 @@ export default function HomeScreen() {
           }))
           if (posts.length) setArticleFeed(posts)
         }
-    } catch {
+
+        if (bannersRes.status === 'fulfilled') {
+          const bannerList = pickArray(bannersRes.value?.data as any, ['ad_banners', 'banners', 'items'])
+          if (bannerList.length) setBanners(bannerList)
+        }
+    } catch (e) {
       setError(true)
+      // individual feed errors are swallowed above via allSettled;
+      // this catch only fires if Promise.allSettled itself throws (shouldn't happen)
+      void parseApiError(e)
     } finally {
       setLoading(false)
     }
@@ -86,11 +99,6 @@ export default function HomeScreen() {
   useEffect(() => { loadHome() }, [loadHome])
 
   function handleQuickAction(id: string) {
-    if (id === 'sos') {
-      nav.navigate('SOS')
-      return
-    }
-
     if (id === 'book') {
       nav.navigate('Booking', { vetId: vetFeed[0]?.uuid || vetFeed[0]?.id, vet: vetFeed[0] })
       return
@@ -109,8 +117,33 @@ export default function HomeScreen() {
     nav.navigate('Search')
   }
 
+  async function handleResendVerification() {
+    setResendingVerify(true)
+    try {
+      await resendVerificationEmail()
+      setVerifyResent(true)
+    } catch { /* ignore */ }
+    setResendingVerify(false)
+  }
+
+  const showVerifyBanner = user && !user.email_verified_at && user.email
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {showVerifyBanner ? (
+        <View style={styles.verifyBanner}>
+          <Text style={styles.verifyText}>
+            {verifyResent ? '✅ Verification email sent! Check your inbox.' : '📧 Please verify your email address.'}
+          </Text>
+          {!verifyResent ? (
+            <Pressable onPress={handleResendVerification} disabled={resendingVerify} style={styles.resendBtn}>
+              {resendingVerify
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Text style={styles.resendBtnText}>Resend</Text>}
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       <View style={styles.heroCard}>
         <View style={styles.heroTopRow}>
           <Text style={styles.heroEyebrow}>Today&apos;s pulse</Text>
@@ -135,6 +168,20 @@ export default function HomeScreen() {
           <QuickAction key={a.id} action={a} onPress={() => handleQuickAction(a.id)} />
         ))}
       </View>
+
+      {banners.length > 0 ? (
+        <>
+          <SectionHeader title="Featured" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow} style={styles.bannerScroll}>
+            {banners.map((b: any, i: number) => (
+              <View key={b.uuid || b.id || String(i)} style={styles.bannerCard}>
+                <Text style={styles.bannerTitle}>{b.title || b.name || 'Offer'}</Text>
+                {b.subtitle || b.description ? <Text style={styles.bannerSubtitle}>{b.subtitle || b.description}</Text> : null}
+              </View>
+            ))}
+          </ScrollView>
+        </>
+      ) : null}
 
       <SectionHeader title="Nearby vets" action="See all" onAction={() => nav.navigate('Search')} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
@@ -193,6 +240,21 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: 48 },
+  verifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.sky,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  verifyText: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 18 },
+  resendBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.primary, borderRadius: 999 },
+  resendBtnText: { color: colors.onPrimary, fontWeight: '700', fontSize: 12 },
   heroCard: {
     backgroundColor: colors.primary,
     borderRadius: 28,
@@ -217,6 +279,17 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
   sectionAction: { color: colors.primary, fontWeight: '700' },
+  bannerScroll: { marginBottom: spacing.sm },
+  bannerCard: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    minWidth: 220,
+    maxWidth: 280,
+    justifyContent: 'flex-end',
+  },
+  bannerTitle: { color: colors.onPrimary, fontWeight: '800', fontSize: 16 },
+  bannerSubtitle: { color: 'rgba(255,247,241,0.85)', marginTop: 4, fontSize: 13, lineHeight: 18 },
   articleCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.sm },
   articleCategory: { color: colors.primary, fontWeight: '700', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 },
   articleTitle: { color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 6 },

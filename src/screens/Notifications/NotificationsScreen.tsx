@@ -2,11 +2,14 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
+import { useNavigation } from '@react-navigation/native'
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../services'
 import { colors, radius, spacing } from '../../theme'
 import { pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
 
 export default function NotificationsScreen() {
+  const nav = useNavigation<any>()
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,8 +22,8 @@ export default function NotificationsScreen() {
       const res = await getNotifications('per_page=30')
       const list = pickArray(res?.data, ['notifications', 'items'])
       setNotifications(list)
-    } catch {
-      setError('Unable to load. Check your connection and try again.')
+    } catch (e) {
+      setError(parseApiError(e))
     } finally {
       setLoading(false)
     }
@@ -32,8 +35,8 @@ export default function NotificationsScreen() {
     try {
       await markNotificationRead(id)
       setNotifications(prev => prev.map(n => (String(n.id || n.uuid) === id ? { ...n, read_at: new Date().toISOString() } : n)))
-    } catch {
-      Alert.alert('Error', 'Could not mark notification as read.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     }
   }
 
@@ -42,11 +45,31 @@ export default function NotificationsScreen() {
     try {
       await markAllNotificationsRead()
       setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })))
-    } catch {
-      Alert.alert('Error', 'Could not mark all as read.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     } finally {
       setMarkingAll(false)
     }
+  }
+
+  // Best-effort in-app deep link: route to the relevant screen when a
+  // notification carries a target, mirroring the push-tap handler.
+  function handleOpen(n: any, id: string) {
+    if (!n.read_at) handleMarkRead(id)
+    const data = n.data ?? n
+    const screen: string | undefined = data?.screen
+    const params = (data?.params ?? {}) as Record<string, unknown>
+    const apptId = data?.appointment_uuid ?? params?.appointmentId
+    const type = String(n.type ?? data?.type ?? '')
+
+    if (screen === 'AppointmentDetail' || apptId) {
+      nav.navigate('AppointmentDetail', { appointmentId: apptId, ...params })
+    } else if (screen === 'PaymentHistory' || type.includes('payment') || type.includes('refund')) {
+      nav.navigate('PaymentHistory')
+    } else if (screen === 'ConsultationRoom' && (data?.consultationId || params?.consultationId)) {
+      nav.navigate('ConsultationRoom', { consultationId: data?.consultationId ?? params?.consultationId, ...params })
+    }
+    // Otherwise stay on the list — nothing actionable to navigate to.
   }
 
   const unreadCount = notifications.filter(n => !n.read_at).length
@@ -88,7 +111,7 @@ export default function NotificationsScreen() {
           <Pressable
             key={id}
             style={[styles.notifCard, isRead && styles.notifCardRead]}
-            onPress={() => { if (!isRead) handleMarkRead(id) }}
+            onPress={() => handleOpen(n, id)}
           >
             {!isRead ? <View style={styles.unreadDot} /> : null}
             <View style={styles.notifBody}>

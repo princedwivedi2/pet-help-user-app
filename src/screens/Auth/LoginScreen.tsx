@@ -1,20 +1,21 @@
 import React, { useMemo, useState } from 'react'
 import { View, Text, TextInput, Alert, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import PrimaryButton from '../../components/PrimaryButton'
-import { login, register, sendOtp, verifyOtp, forgotPassword } from '../../services'
-import { API_BASE } from '../../services/client'
+import { login, register, sendOtp, verifyOtp, forgotPassword, resetPassword } from '../../services'
 import { useAuth } from '../../contexts/AuthProvider'
 import { useNavigation } from '@react-navigation/native'
 import { colors, radius, spacing } from '../../theme'
+import { parseApiError } from '../../utils/apiError'
 
 export default function LoginScreen() {
-  const [mode, setMode] = useState<'login' | 'signup' | 'otp'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'otp' | 'reset'>('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [otpCode, setOtpCode] = useState('')
+  const [resetToken, setResetToken] = useState('')
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
@@ -93,7 +94,7 @@ export default function LoginScreen() {
 
       Alert.alert('Login failed', res?.message || 'Unable to login. Please try again.')
     } catch (error) {
-      Alert.alert('Login failed', `${String(error)}\n\nAPI: ${API_BASE}`)
+      Alert.alert('Login failed', parseApiError(error))
     } finally {
       setLoading(false)
     }
@@ -119,7 +120,7 @@ export default function LoginScreen() {
 
       Alert.alert('Signup failed', res?.message || 'Unable to create your account.')
     } catch (error) {
-      Alert.alert('Signup failed', String(error))
+      Alert.alert('Signup failed', parseApiError(error))
     } finally {
       setLoading(false)
     }
@@ -158,7 +159,7 @@ export default function LoginScreen() {
 
       Alert.alert('OTP', res?.message || 'Unable to verify the code.')
     } catch (error) {
-      Alert.alert('OTP', String(error))
+      Alert.alert('OTP', parseApiError(error))
     } finally {
       setLoading(false)
     }
@@ -169,17 +170,48 @@ export default function LoginScreen() {
       setErrors({ identifier: 'Enter your email or phone number' })
       return
     }
-
-    const res = await forgotPassword({ email: identifier })
-    Alert.alert('Reset password', res?.message || 'Check your inbox for reset instructions.')
+    setLoading(true)
+    try {
+      const res = await forgotPassword({ email: identifier })
+      Alert.alert(
+        'Reset link sent',
+        res?.message || 'Check your inbox for the reset link. Copy the token from the link and enter it below.',
+        [{ text: 'Enter token', onPress: () => setMode('reset') }],
+      )
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
+    } finally {
+      setLoading(false)
+    }
   }
 
-  async function handleApiTest() {
+  async function handleResetPassword() {
+    const errs: Record<string, string> = {}
+    if (!email.trim()) errs.identifier = 'Enter your email address'
+    if (!resetToken.trim()) errs.resetToken = 'Enter the token from the reset email'
+    if (trimmedPassword.length < 8) errs.password = 'Password must be at least 8 characters'
+    if (trimmedConfirmPassword !== trimmedPassword) errs.confirmPassword = 'Passwords do not match'
+    if (Object.keys(errs).length) { setErrors(errs); return }
+
+    setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/auth/me`)
-      Alert.alert('API test', `Reached API.\nStatus: ${response.status}\nURL: ${API_BASE}`)
-    } catch (error) {
-      Alert.alert('API test failed', `${String(error)}\n\nAPI: ${API_BASE}`)
+      const res = await resetPassword({
+        email: email.trim(),
+        password: trimmedPassword,
+        password_confirmation: trimmedConfirmPassword,
+        token: resetToken.trim(),
+      })
+      if (res?.success) {
+        Alert.alert('Password reset', 'Your password has been reset. Sign in with your new password.', [
+          { text: 'Sign in', onPress: () => { setMode('login'); setResetToken(''); setPassword(''); setConfirmPassword('') } },
+        ])
+      } else {
+        Alert.alert('Reset failed', res?.message || 'The token may be invalid or expired. Request a new link.')
+      }
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -193,10 +225,10 @@ export default function LoginScreen() {
       <View style={styles.card}>
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in, create an account, or use OTP to continue.</Text>
-        <Pressable onPress={handleApiTest}>
-          <Text style={styles.debugLink}>Test API connection</Text>
+
+        <Pressable onPress={() => navigation.navigate('ServerSettings')} hitSlop={8}>
+          <Text style={styles.serverLink}>Server settings</Text>
         </Pressable>
-        <Text style={styles.debugText}>{API_BASE}</Text>
 
         <View style={styles.segmentWrap}>
           {(['login', 'signup', 'otp'] as const).map(item => (
@@ -204,6 +236,11 @@ export default function LoginScreen() {
               <Text style={[styles.segmentText, mode === item && styles.segmentTextActive]}>{item.toUpperCase()}</Text>
             </Pressable>
           ))}
+          {mode === 'reset' && (
+            <Pressable style={[styles.segment, styles.segmentActive]} onPress={() => {}}>
+              <Text style={[styles.segmentText, styles.segmentTextActive]}>RESET</Text>
+            </Pressable>
+          )}
         </View>
 
         {loading && <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.sm }} />}
@@ -273,6 +310,48 @@ export default function LoginScreen() {
             />
             {otpSent ? <Field label="6-digit code" value={otpCode} onChangeText={setOtpCode} placeholder="123456" keyboardType="number-pad" /> : null}
             <PrimaryButton title={loading ? 'Working...' : otpSent ? 'Verify OTP' : 'Send OTP'} onPress={handleOtp} disabled={otpSent ? !canVerifyOtp : !canSendOtp} />
+          </View>
+        ) : mode === 'reset' ? (
+          <View style={styles.form}>
+            <Field
+              label="Email"
+              value={email}
+              onChangeText={v => { setEmail(v); setErrors(p => { const n = { ...p }; delete n.identifier; return n }) }}
+              placeholder="aanya@respaw.app"
+              keyboardType="email-address"
+              error={errors.identifier}
+            />
+            <Field
+              label="Reset token (from email)"
+              value={resetToken}
+              onChangeText={v => { setResetToken(v); setErrors(p => { const n = { ...p }; delete n.resetToken; return n }) }}
+              placeholder="Paste token from reset email"
+              error={errors.resetToken}
+            />
+            <Field
+              label="New password"
+              value={password}
+              onChangeText={v => { setPassword(v); setErrors(p => { const n = { ...p }; delete n.password; return n }) }}
+              onBlur={() => validateField('password', password)}
+              placeholder="Min 8 characters"
+              secureTextEntry={!passwordVisible}
+              rightAction={passwordVisible ? 'Hide' : 'Show'}
+              onRightAction={() => setPasswordVisible(v => !v)}
+              error={errors.password}
+            />
+            <Field
+              label="Confirm new password"
+              value={confirmPassword}
+              onChangeText={v => { setConfirmPassword(v); setErrors(p => { const n = { ...p }; delete n.confirmPassword; return n }) }}
+              onBlur={() => validateField('confirmPassword', confirmPassword)}
+              placeholder="Repeat new password"
+              secureTextEntry={!passwordVisible}
+              error={errors.confirmPassword}
+            />
+            <PrimaryButton title={loading ? 'Resetting…' : 'Reset password'} onPress={handleResetPassword} disabled={loading} />
+            <Pressable onPress={() => { setMode('login'); setErrors({}) }}>
+              <Text style={styles.link}>Back to sign in</Text>
+            </Pressable>
           </View>
         ) : (
           <View style={styles.form}>
@@ -369,8 +448,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 24, fontWeight: '800', color: colors.text },
   subtitle: { marginTop: 6, color: colors.muted, lineHeight: 20 },
-  debugLink: { marginTop: 10, color: colors.primary, fontWeight: '700', textAlign: 'center' },
-  debugText: { marginTop: 6, color: colors.muted, fontSize: 11, textAlign: 'center' },
+  serverLink: { marginTop: 10, color: colors.primary, fontWeight: '700', fontSize: 13 },
   segmentWrap: { flexDirection: 'row', gap: 8, marginTop: spacing.lg, marginBottom: spacing.lg },
   segment: {
     flex: 1,
