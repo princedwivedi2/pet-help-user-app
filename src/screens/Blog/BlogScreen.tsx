@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
 import { getBlogPosts, getBlogCategories, likeBlogPost } from '../../services/blog'
@@ -51,7 +51,10 @@ export default function BlogScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Pet Care Tips</Text>
+      <View style={styles.hero}>
+        <View style={styles.heroIcon}><Ionicons name="leaf-outline" size={24} color={colors.primary} /></View>
+        <View style={styles.heroCopy}><Text style={styles.title}>Care journal</Text><Text style={styles.subtitle}>Thoughtful guidance for healthier, happier pets.</Text></View>
+      </View>
 
       {/* Category chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipRowContent}>
@@ -122,6 +125,7 @@ export default function BlogScreen() {
                   {post.likes_count != null ? (
                     <Text style={styles.likeCount}>{post.likes_count}</Text>
                   ) : null}
+                  <View style={styles.readAction}><Text style={styles.readActionText}>Read article</Text><Ionicons name="arrow-forward" size={15} color={colors.primary} /></View>
                 </View>
               </Pressable>
             )
@@ -133,14 +137,18 @@ export default function BlogScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  title: { fontSize: 28, fontWeight: '700', color: colors.text, marginBottom: spacing.md },
+  content: { padding: spacing.xl, paddingBottom: 48 },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, marginBottom: spacing.lg, borderRadius: radius.xl, backgroundColor: colors.primarySoft },
+  heroIcon: { width: 52, height: 52, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  heroCopy: { flex: 1 },
+  title: { ...typography.h1, color: colors.text },
+  subtitle: { ...typography.caption, color: colors.muted, marginTop: 3 },
   chipRow: { flexGrow: 0, marginBottom: spacing.md },
   chipRowContent: { gap: 8, paddingBottom: 4 },
   chip: {
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -154,13 +162,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    padding: spacing.md,
+    padding: spacing.lg,
     marginBottom: spacing.md,
-    gap: 6,
+    gap: 7,
+    ...shadows.card,
   },
-  categoryLabel: { fontSize: 12, color: colors.primary, fontWeight: '700', letterSpacing: 0.5 },
-  postTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  excerpt: { fontSize: 12, color: colors.muted, lineHeight: 18 },
-  likeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  categoryLabel: { fontSize: 10, color: colors.primary, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' },
+  postTitle: { ...typography.h3, color: colors.text },
+  excerpt: { ...typography.caption, color: colors.muted },
+  likeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   likeCount: { fontSize: 12, color: colors.muted },
+  readAction: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 4 },
+  readActionText: { ...typography.caption, color: colors.primary, fontWeight: '800' },
 })

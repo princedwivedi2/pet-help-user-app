@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import ErrorCard from '../../components/ErrorCard'
+import PageHeader from '../../components/PageHeader'
 import { getAppointment, cancelAppointment } from '../../services/appointments'
 import { createReview, getReviewsForVet } from '../../services'
 import { pickArray } from '../../utils/backendAdapters'
@@ -133,13 +134,7 @@ export default function AppointmentDetailScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <Pressable onPress={() => nav.goBack()} accessibilityLabel="Go back" style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={styles.pageTitle}>Appointment Details</Text>
-      </View>
+      <PageHeader title="Appointment details" subtitle="Timing, care type, payment, and next actions" />
 
       {loading && !data ? <ActivityIndicator color={colors.primary} style={styles.spinner} /> : null}
       {!loading && error ? <ErrorCard message={error} onRetry={refetch} /> : null}
@@ -147,11 +142,9 @@ export default function AppointmentDetailScreen() {
       {data ? (
         <>
           {/* Status card */}
-          <View style={styles.card}>
-            <Text style={styles.vetName}>{vetName}</Text>
-            <Text style={styles.dateText}>{formattedDate}</Text>
+          <View style={[styles.card, styles.heroCard]}>
+            <View style={styles.heroTop}><View style={styles.heroIcon}><Ionicons name={type === 'online' ? 'videocam' : isHomeVisit ? 'home' : 'calendar'} size={22} color={colors.primary} /></View><View style={styles.heroCopy}><Text style={styles.vetName}>{vetName}</Text><Text style={styles.dateText}>{formattedDate}</Text></View><StatusBadge status={status} /></View>
             <View style={styles.badgeRow}>
-              <StatusBadge status={status} />
               {type ? (
                 <View style={[styles.badge, styles.typeBadge]}>
                   <Text style={[styles.badgeText, { color: colors.muted }]}>{type.replace('_', ' ').toUpperCase()}</Text>
@@ -251,10 +244,7 @@ export default function AppointmentDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg, gap: spacing.sm },
-  backBtn: { padding: 4 },
-  pageTitle: { fontSize: 28, fontWeight: '700', color: colors.text, flex: 1 },
+  content: { padding: spacing.xl, paddingBottom: 48 },
   spinner: { marginTop: spacing.xl },
   card: {
     borderRadius: radius.xl,
@@ -263,9 +253,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing.lg,
     marginBottom: spacing.md,
+    ...shadows.card,
   },
-  vetName: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  dateText: { fontSize: 14, color: colors.muted, marginBottom: spacing.sm },
+  heroCard: { backgroundColor: colors.primarySoft, borderColor: colors.borderStrong, padding: spacing.lg },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  heroIcon: { width: 48, height: 48, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  heroCopy: { flex: 1 },
+  vetName: { ...typography.h3, color: colors.text },
+  dateText: { ...typography.caption, color: colors.muted, marginTop: 3 },
   badgeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 },
   badge: {
     borderRadius: radius.sm,
@@ -275,7 +270,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
   typeBadge: { backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: colors.muted, marginBottom: spacing.sm, letterSpacing: 0.5 },
+  cardTitle: { fontSize: 10, fontWeight: '900', color: colors.muted, marginBottom: spacing.sm, letterSpacing: 1, textTransform: 'uppercase' },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
   detailLabel: { fontSize: 14, color: colors.muted },
   detailValue: { fontSize: 14, color: colors.text, fontWeight: '600', flexShrink: 1, textAlign: 'right', maxWidth: '60%' },

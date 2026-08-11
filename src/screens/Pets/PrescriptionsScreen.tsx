@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Linking } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
+import PageHeader from '../../components/PageHeader'
 import { getPetVisitRecords } from '../../services/pets'
 import { pickArray } from '../../utils/adapters'
 
@@ -52,12 +53,10 @@ export default function PrescriptionsScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <Pressable onPress={() => nav.goBack()} accessibilityLabel="Go back" style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={styles.pageTitle}>{petName ? `${petName}'s Prescriptions` : 'Prescriptions'}</Text>
-      </View>
+      <PageHeader
+        title={petName ? `${petName}'s prescriptions` : 'Prescriptions'}
+        subtitle="Treatment instructions and files from vet visits"
+      />
 
       {loading ? <ActivityIndicator color={colors.primary} style={styles.spinner} /> : null}
       {!loading && error ? <ErrorCard message={error} onRetry={refetch} /> : null}
@@ -80,7 +79,10 @@ export default function PrescriptionsScreen() {
             const fileUrl = record.prescription_file ?? ''
             return (
               <View key={record.uuid ?? record.id ?? i} style={styles.card}>
-                {formattedDate ? <Text style={styles.dateText}>{formattedDate}</Text> : null}
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardIdentity}><View style={styles.rxIcon}><Ionicons name="medical" size={18} color={colors.primary} /></View><Text style={styles.cardTitle}>Prescription</Text></View>
+                  {formattedDate ? <Text style={styles.dateText}>{formattedDate}</Text> : null}
+                </View>
                 {record.diagnosis ? (
                   <View style={styles.fieldBlock}>
                     <Text style={styles.fieldLabel}>Diagnosis</Text>
@@ -119,24 +121,26 @@ export default function PrescriptionsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg, gap: spacing.sm },
-  backBtn: { padding: 4 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: colors.text, flex: 1 },
+  content: { padding: spacing.xl, paddingBottom: 48 },
   spinner: { marginTop: spacing.xl },
   card: {
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    padding: spacing.md,
+    padding: spacing.lg,
     marginBottom: spacing.md,
-    gap: 8,
+    gap: spacing.md,
+    ...shadows.card,
   },
-  dateText: { fontSize: 12, color: colors.muted, marginBottom: 4 },
-  fieldBlock: { gap: 2 },
-  fieldLabel: { fontSize: 12, color: colors.muted, fontWeight: '600', letterSpacing: 0.4 },
-  fieldValue: { fontSize: 14, color: colors.text, lineHeight: 20 },
-  downloadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  downloadText: { fontSize: 14, color: colors.accent, fontWeight: '700' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  cardIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rxIcon: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
+  cardTitle: { ...typography.h3, color: colors.text },
+  dateText: { ...typography.caption, color: colors.muted },
+  fieldBlock: { gap: 3 },
+  fieldLabel: { ...typography.caption, color: colors.muted, fontWeight: '700', letterSpacing: 0.3 },
+  fieldValue: { ...typography.body, color: colors.text },
+  downloadRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4, borderRadius: radius.md, backgroundColor: colors.accentSoft },
+  downloadText: { ...typography.label, color: colors.accent },
 })

@@ -14,7 +14,7 @@ import * as SecureStore from 'expo-secure-store'
 const OVERRIDE_KEY = 'apiBaseOverride'
 
 export const DEFAULT_API_BASE = normalizeBaseUrl(
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://192.168.1.100:8002/api/v1',
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://api.respaw.in/api/v1',
 )
 
 // Synchronous cache so request() doesn't await SecureStore on every call.

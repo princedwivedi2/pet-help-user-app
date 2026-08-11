@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
+import PageHeader from '../../components/PageHeader'
 import { getPayments, getWallet } from '../../services'
 import { pickArray } from '../../utils/backendAdapters'
 import { parseApiError } from '../../utils/apiError'
@@ -19,7 +19,6 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 export default function WalletScreen() {
-  const nav = useNavigation<any>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [wallet, setWallet] = useState<any>(null)
@@ -57,17 +56,13 @@ export default function WalletScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <Pressable onPress={() => nav.goBack()} style={styles.backBtn} accessibilityLabel="Go back">
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={styles.pageTitle}>Payments & Wallet</Text>
-      </View>
+      <PageHeader title="Payments & wallet" subtitle="Balance, refunds, and recent activity" />
 
       {wallet ? (
         <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Wallet Balance</Text>
+          <View style={styles.balanceTop}><View style={styles.balanceIcon}><Ionicons name="wallet-outline" size={22} color={colors.onPrimary} /></View><Text style={styles.balanceLabel}>RESPAW WALLET</Text></View>
           <Text style={styles.balanceAmount}>₹{wallet.balance ?? 0}</Text>
+          <Text style={styles.balanceHint}>Available for upcoming care and eligible refunds</Text>
         </View>
       ) : null}
 
@@ -104,6 +99,7 @@ function TransactionRow({ tx }: { tx: any }) {
 
   return (
     <View style={styles.txRow}>
+      <View style={styles.txIcon}><Ionicons name={type === 'subscription' ? 'sparkles-outline' : type === 'consultation' ? 'videocam-outline' : 'calendar-outline'} size={18} color={colors.primary} /></View>
       <View style={styles.txLeft}>
         <Text style={styles.txType}>{typeLabel}</Text>
         {date ? <Text style={styles.txDate}>{date}</Text> : null}
@@ -120,21 +116,22 @@ function TransactionRow({ tx }: { tx: any }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg, gap: spacing.sm },
-  backBtn: { padding: 4 },
-  pageTitle: { fontSize: 28, fontWeight: '700', color: colors.text, flex: 1 },
+  content: { padding: spacing.xl, paddingBottom: 48 },
   spinner: { marginTop: spacing.xl },
   balanceCard: {
     backgroundColor: colors.primary,
     borderRadius: radius.xl,
-    padding: spacing.lg,
+    padding: spacing.xl,
     marginBottom: spacing.lg,
-    alignItems: 'center',
+    overflow: 'hidden',
+    ...shadows.floating,
   },
-  balanceLabel: { color: 'rgba(255,247,241,0.85)', fontSize: 13, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
-  balanceAmount: { color: colors.onPrimary, fontSize: 40, fontWeight: '800', marginTop: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
+  balanceTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  balanceIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.14)' },
+  balanceLabel: { color: 'rgba(255,247,241,0.82)', fontSize: 11, fontWeight: '900', letterSpacing: 1.1 },
+  balanceAmount: { color: colors.onPrimary, fontSize: 42, fontWeight: '900', marginTop: spacing.lg, letterSpacing: -1.2 },
+  balanceHint: { ...typography.caption, color: 'rgba(255,247,241,0.72)', marginTop: 5, maxWidth: 250 },
+  sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.md },
   txRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -145,10 +142,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
     marginBottom: spacing.sm,
+    gap: spacing.md,
+    ...shadows.card,
   },
+  txIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   txLeft: { flex: 1 },
-  txType: { fontSize: 14, fontWeight: '700', color: colors.text },
-  txDate: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  txType: { ...typography.bodyStrong, color: colors.text },
+  txDate: { ...typography.caption, color: colors.muted, marginTop: 2 },
   txRight: { alignItems: 'flex-end', gap: 4 },
   txAmount: { fontSize: 16, fontWeight: '800', color: colors.text },
   txBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },

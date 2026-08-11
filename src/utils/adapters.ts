@@ -124,8 +124,8 @@ export function normalizePet(raw: AnyRecord = {}, index = 0) {
   const weight = raw.weight_kg != null && raw.weight_kg !== '' ? `${raw.weight_kg} kg` : ''
 
   return {
-    id: String(raw.uuid || raw.id || `pet-${index}`),
-    uuid: raw.uuid || raw.id,
+    id: String(raw.id || `pet-${index}`),
+    uuid: raw.uuid || undefined,
     name: raw.name || raw.pet_name || 'Pet',
     species: raw.species || raw.breed || raw.type || 'Pet',
     breed,

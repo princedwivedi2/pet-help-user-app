@@ -11,7 +11,7 @@ import {
   StyleSheet,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { pickArray } from '../../utils/adapters'
 import {
   getChatbotSessions,
@@ -56,16 +56,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <View style={styles.botBubble}>
-      <Text style={[styles.botText, message._thinking && styles.thinkingText]}>
-        {message.content}
-      </Text>
-      {message._error ? (
-        <Text style={styles.inlineError}>Message failed to send. Try again.</Text>
-      ) : null}
-      {message.created_at ? (
-        <Text style={styles.botTimestamp}>{formatTime(message.created_at)}</Text>
-      ) : null}
+    <View style={styles.botMessageRow}>
+      <View style={styles.botAvatar}><Ionicons name="paw" size={15} color={colors.primary} /></View>
+      <View style={styles.botBubble}>
+        <Text style={[styles.botText, message._thinking && styles.thinkingText]}>{message.content}</Text>
+        {message._error ? <Text style={styles.inlineError}>Message failed to send. Try again.</Text> : null}
+        {message.created_at ? <Text style={styles.botTimestamp}>{formatTime(message.created_at)}</Text> : null}
+      </View>
     </View>
   )
 }
@@ -179,13 +176,14 @@ export default function ChatScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>AI Pet Assistant</Text>
+        <View style={styles.headerIdentity}><View style={styles.headerIcon}><Ionicons name="sparkles" size={20} color={colors.primary} /></View><View><Text style={styles.headerTitle}>Respaw assistant</Text><Text style={styles.headerSubtitle}>General guidance for your pet</Text></View></View>
         <Pressable
           onPress={handleNewConversation}
           accessible
           accessibilityLabel="New conversation"
+          style={styles.newConversation}
         >
-          <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+          <Ionicons name="add" size={21} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -254,24 +252,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  headerIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
+  headerTitle: { ...typography.h3, color: colors.text },
+  headerSubtitle: { ...typography.caption, color: colors.muted, marginTop: 1 },
+  newConversation: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
   messageArea: { flex: 1 },
   centered: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl },
+  botMessageRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, maxWidth: '88%', marginBottom: spacing.md },
+  botAvatar: { width: 30, height: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   botBubble: {
-    backgroundColor: colors.surfaceSoft,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    maxWidth: '75%',
-    padding: spacing.sm,
-    alignSelf: 'flex-start',
-    marginBottom: spacing.sm,
+    flexShrink: 1,
+    padding: spacing.md,
+    ...shadows.card,
   },
   botText: { fontSize: 14, color: colors.text, lineHeight: 20 },
   thinkingText: { color: colors.muted },
@@ -281,9 +284,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.lg,
     maxWidth: '75%',
-    padding: spacing.sm,
+    padding: spacing.md,
     alignSelf: 'flex-end',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   userText: { fontSize: 14, color: colors.onPrimary, lineHeight: 20 },
   userTimestamp: { fontSize: 12, color: colors.onPrimary, marginTop: 2, opacity: 0.8 },
@@ -291,18 +294,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceSoft,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     flex: 1,
-    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
     color: colors.text,
     fontSize: 14,
     maxHeight: 100,

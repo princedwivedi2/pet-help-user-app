@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import ErrorCard from '../../components/ErrorCard'
+import PageHeader from '../../components/PageHeader'
 import { useNavigation } from '@react-navigation/native'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { createConsultation, getPets } from '../../services'
 import { parseApiError } from '../../utils/apiError'
 
 const MODES = [
-  { value: 'video', icon: '🎥', label: 'Video Call', desc: 'Face-to-face video consultation', paid: true },
-  { value: 'audio', icon: '📞', label: 'Audio Call', desc: 'Voice-only consultation', paid: true },
-  { value: 'chat',  icon: '💬', label: 'Chat',       desc: 'Text-based consultation', paid: false },
+  { value: 'video', icon: 'videocam' as const, label: 'Video call', desc: 'Meet face-to-face and show visible symptoms', paid: true },
+  { value: 'audio', icon: 'call' as const, label: 'Audio call', desc: 'Talk privately when video is not needed', paid: true },
+  { value: 'chat', icon: 'chatbubble-ellipses' as const, label: 'Chat', desc: 'Share a question through secure messages', paid: false },
 ] as const
 
 // Fee shown on the picker — backend will set the real amount on the order
@@ -24,16 +26,17 @@ export default function ModalityPickerScreen() {
     setLoading(true)
     setError('')
     try {
-      let petUuid: string | undefined
+      let petId: number | undefined
       try {
         const petsRes = await getPets()
         const first = (petsRes?.data as any)?.pets?.[0]
-        petUuid = first?.uuid || first?.id
+        const rawPetId = Number(first?.id)
+        petId = Number.isInteger(rawPetId) && rawPetId > 0 ? rawPetId : undefined
       } catch { /* non-fatal */ }
 
       const res = await createConsultation({
         modality,
-        pet_uuid: petUuid ?? null,
+        pet_id: petId ?? null,
         payment_uuid: null,
       })
       const consultation = (res?.data as any)?.consultation
@@ -70,8 +73,8 @@ export default function ModalityPickerScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Start a Consultation</Text>
-      <Text style={styles.subtitle}>Choose how you'd like to connect with a vet</Text>
+      <PageHeader title="Choose how to connect" subtitle="Select the format that fits your pet's concern" />
+      <View style={styles.careNote}><View style={styles.careNoteIcon}><Ionicons name="shield-checkmark-outline" size={20} color={colors.accent} /></View><Text style={styles.careNoteText}>Every option creates a secure consultation and keeps the outcome with your pet's care history.</Text></View>
 
       {loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} />
@@ -86,7 +89,7 @@ export default function ModalityPickerScreen() {
           disabled={loading}
           accessibilityLabel={`${m.label} consultation`}
         >
-          <Text style={styles.icon}>{m.icon}</Text>
+          <View style={styles.icon}><Ionicons name={m.icon} size={24} color={colors.primary} /></View>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>{m.label}</Text>
             <Text style={styles.desc}>{m.desc}</Text>
@@ -100,6 +103,7 @@ export default function ModalityPickerScreen() {
               <Text style={[styles.feeBadgeText, styles.freeBadgeText]}>Free</Text>
             </View>
           )}
+          <Ionicons name="chevron-forward" size={18} color={colors.subtle} />
         </Pressable>
       ))}
 
@@ -113,9 +117,10 @@ export default function ModalityPickerScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: spacing.xs },
-  subtitle: { color: colors.muted, marginBottom: spacing.lg, fontSize: 14 },
+  content: { padding: spacing.xl, paddingBottom: 48 },
+  careNote: { flexDirection: 'row', gap: spacing.md, alignItems: 'center', padding: spacing.md, marginBottom: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.accentSoft },
+  careNoteIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  careNoteText: { ...typography.caption, color: colors.text, flex: 1 },
   modeCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -126,10 +131,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    ...shadows.card,
   },
-  icon: { fontSize: 32 },
-  label: { fontWeight: '800', color: colors.text, fontSize: 16 },
-  desc: { color: colors.muted, fontSize: 13, marginTop: 2 },
+  icon: { width: 50, height: 50, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
+  label: { ...typography.h3, color: colors.text },
+  desc: { ...typography.caption, color: colors.muted, marginTop: 2 },
   feeBadge: {
     backgroundColor: colors.primarySoft,
     borderRadius: radius.sm,

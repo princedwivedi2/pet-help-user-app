@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
+import PageHeader from '../../components/PageHeader'
 import { useNavigation } from '@react-navigation/native'
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../services'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { pickArray } from '../../utils/backendAdapters'
 import { parseApiError } from '../../utils/apiError'
 
@@ -74,19 +76,25 @@ export default function NotificationsScreen() {
 
   const unreadCount = notifications.filter(n => !n.read_at).length
 
+  function iconFor(n: any): React.ComponentProps<typeof Ionicons>['name'] {
+    const type = String(n.type ?? n.data?.type ?? '').toLowerCase()
+    if (type.includes('payment') || type.includes('refund')) return 'card-outline'
+    if (type.includes('appointment') || type.includes('booking')) return 'calendar-outline'
+    if (type.includes('consult')) return 'videocam-outline'
+    if (type.includes('prescription')) return 'medical-outline'
+    return 'notifications-outline'
+  }
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Notifications</Text>
-          {unreadCount > 0 ? <Text style={styles.subtitle}>{unreadCount} unread</Text> : null}
-        </View>
-        {unreadCount > 0 ? (
-          <Pressable style={styles.markAllBtn} onPress={handleMarkAll} disabled={markingAll}>
-            {markingAll ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={styles.markAllText}>Mark all read</Text>}
-          </Pressable>
-        ) : null}
-      </View>
+      <PageHeader
+        title="Notifications"
+        subtitle={unreadCount > 0 ? `${unreadCount} update${unreadCount === 1 ? '' : 's'} waiting for you` : 'Everything important, in one place'}
+        rightIcon={unreadCount > 0 ? 'checkmark-done' : undefined}
+        rightLabel="Mark all notifications as read"
+        onRightPress={unreadCount > 0 ? handleMarkAll : undefined}
+      />
+      {markingAll ? <View style={styles.syncRow}><ActivityIndicator size="small" color={colors.primary} /><Text style={styles.syncText}>Updating notifications…</Text></View> : null}
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} /> : null}
 
@@ -113,8 +121,11 @@ export default function NotificationsScreen() {
             style={[styles.notifCard, isRead && styles.notifCardRead]}
             onPress={() => handleOpen(n, id)}
           >
-            {!isRead ? <View style={styles.unreadDot} /> : null}
+            <View style={[styles.notifIcon, !isRead && styles.notifIconUnread]}>
+              <Ionicons name={iconFor(n)} size={20} color={!isRead ? colors.primary : colors.muted} />
+            </View>
             <View style={styles.notifBody}>
+              {!isRead ? <Text style={styles.newLabel}>NEW</Text> : null}
               <Text style={[styles.notifTitle, isRead && styles.notifTitleRead]}>{title}</Text>
               {body ? <Text style={styles.notifMessage}>{body}</Text> : null}
               {createdAt ? <Text style={styles.notifTime}>{createdAt}</Text> : null}
@@ -128,28 +139,28 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.lg },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { color: colors.primary, fontWeight: '700', marginTop: 4 },
-  markAllBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primary },
-  markAllText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
+  content: { padding: spacing.xl, paddingBottom: 48 },
+  syncRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, marginBottom: spacing.md, borderRadius: radius.md, backgroundColor: colors.primarySoft },
+  syncText: { ...typography.caption, color: colors.primary },
   notifCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary,
-    padding: spacing.md,
+    borderColor: colors.border,
+    padding: spacing.lg,
     marginBottom: spacing.sm,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    alignItems: 'center',
+    gap: spacing.md,
+    ...shadows.card,
   },
-  notifCardRead: { borderColor: colors.border, backgroundColor: colors.surfaceSoft },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginTop: 6 },
+  notifCardRead: { backgroundColor: colors.surface, shadowOpacity: 0.02 },
+  notifIcon: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceSoft },
+  notifIconUnread: { backgroundColor: colors.primarySoft },
   notifBody: { flex: 1 },
-  notifTitle: { fontWeight: '800', color: colors.text },
-  notifTitleRead: { fontWeight: '600', color: colors.muted },
-  notifMessage: { color: colors.muted, marginTop: 4, lineHeight: 18 },
-  notifTime: { color: colors.muted, fontSize: 11, marginTop: 6 },
+  newLabel: { color: colors.primary, fontSize: 9, fontWeight: '900', letterSpacing: 1, marginBottom: 3 },
+  notifTitle: { ...typography.bodyStrong, color: colors.text },
+  notifTitleRead: { color: colors.text },
+  notifMessage: { ...typography.caption, color: colors.muted, marginTop: 3 },
+  notifTime: { color: colors.subtle, fontSize: 11, marginTop: 7, fontWeight: '600' },
 })

@@ -6,7 +6,7 @@ import PrimaryButton from '../../components/PrimaryButton'
 import ErrorCard from '../../components/ErrorCard'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { getVet, getReviewsForVet } from '../../services'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { normalizeVet, pickArray } from '../../utils/backendAdapters'
 import { parseApiError } from '../../utils/apiError'
 import { openDirections, DEFAULT_DELTA, HAS_MAPS_KEY } from '../../utils/geo'
@@ -265,9 +265,9 @@ function ReviewRow({ review }: { review: any }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: 'center', justifyContent: 'center' },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  heroCard: { backgroundColor: colors.primary, borderRadius: 28, padding: spacing.lg, marginBottom: spacing.lg },
-  name: { color: colors.onPrimary, fontSize: 28, fontWeight: '800' },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 48 },
+  heroCard: { backgroundColor: colors.primary, borderRadius: radius.xl, padding: spacing.xl, marginBottom: spacing.xl, ...shadows.floating },
+  name: { ...typography.h1, color: colors.onPrimary },
   clinic: { color: colors.onPrimary, fontSize: 16, marginTop: 4, opacity: 0.95 },
   meta: { color: 'rgba(255,247,241,0.9)', marginTop: 6 },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: spacing.lg },
@@ -277,8 +277,8 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.lg },
   chip: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10 },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
-  card: { backgroundColor: colors.surface, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md, ...shadows.card },
+  sectionTitle: { ...typography.h2, color: colors.text, marginBottom: spacing.sm },
   body: { color: colors.muted, lineHeight: 20 },
   lineItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   lineLabel: { color: colors.text },

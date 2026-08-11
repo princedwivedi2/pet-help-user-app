@@ -1,14 +1,21 @@
 import React from 'react'
-import { TouchableOpacity, Text, View } from 'react-native'
-import { colors, radius } from '../theme'
+import { Ionicons } from '@expo/vector-icons'
+import { Pressable, Text, View } from 'react-native'
+import { colors, radius, typography } from '../theme'
 
 export default function QuickAction({ action, onPress }: { action: any; onPress?: () => void }) {
+  const fallbackIcons: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+    consult: 'chatbubbles-outline',
+    book: 'calendar-outline',
+    records: 'document-text-outline',
+  }
+  const icon = action.icon || fallbackIcons[action.id]
   return (
-    <TouchableOpacity onPress={onPress} style={{ alignItems: 'center', width: 80 }}>
-      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
-        <Text style={{ fontSize: 20 }}>{action.emoji}</Text>
+    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => ({ alignItems: 'center', width: 78, opacity: pressed ? 0.72 : 1 })}>
+      <View style={{ width: 54, height: 54, borderRadius: radius.lg, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+        {icon ? <Ionicons name={icon} size={23} color={colors.primary} /> : <Text style={{ fontSize: 20 }}>{action.emoji}</Text>}
       </View>
-      <Text style={{ textAlign: 'center', fontWeight: '700', color: colors.text }}>{action.label}</Text>
-    </TouchableOpacity>
+      <Text style={{ ...typography.caption, textAlign: 'center', color: colors.text }}>{action.label}</Text>
+    </Pressable>
   )
 }

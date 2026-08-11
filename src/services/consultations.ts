@@ -2,7 +2,7 @@ import { request } from './client'
 
 export async function createConsultation(payload: {
   modality: 'video' | 'audio' | 'chat'
-  pet_uuid?: string | null
+  pet_id?: number | null
   issue_category?: string
   issue_description?: string
   fee_amount?: number | null

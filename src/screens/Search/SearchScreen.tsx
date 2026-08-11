@@ -6,7 +6,7 @@ import EmptyState from '../../components/EmptyState'
 import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { getVets } from '../../services'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { normalizeVet, pickArray } from '../../utils/backendAdapters'
 import { parseApiError } from '../../utils/apiError'
 
@@ -82,6 +82,7 @@ export default function SearchScreen() {
       <Text style={styles.subtitle}>Find nearby clinics, emergency care, and online consults.</Text>
 
       <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={20} color={colors.muted} />
         <TextInput
           placeholder="Search vets or clinics"
           value={query}
@@ -131,7 +132,7 @@ export default function SearchScreen() {
 
       {data.map(vet => (
         <View key={vet.id} style={styles.resultCard}>
-          <VetCard vet={vet} onPress={() => nav.navigate('VetDetail', { vetId: vet.uuid || vet.id, vet })} />
+          <VetCard vet={vet} fullWidth onPress={() => nav.navigate('VetDetail', { vetId: vet.uuid || vet.id, vet })} />
         </View>
       ))}
     </ScrollView>
@@ -140,18 +141,23 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { marginTop: 6, color: colors.muted, lineHeight: 20 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 48 },
+  title: { ...typography.h1, color: colors.text },
+  subtitle: { marginTop: 4, ...typography.body, color: colors.muted },
   searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginTop: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 14,
+    minHeight: 54,
+    ...shadows.card,
   },
-  searchInput: { paddingVertical: 14, color: colors.text },
+  searchInput: { flex: 1, paddingVertical: 14, color: colors.text, fontSize: 15 },
   filters: { gap: 8, marginTop: spacing.md, marginBottom: spacing.md },
   chip: {
     paddingHorizontal: 14,
@@ -177,7 +183,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   mapToggleText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
+  sectionTitle: { ...typography.h2, color: colors.text },
   sectionMeta: { color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.sm },
-  resultCard: { marginBottom: spacing.sm },
+  resultCard: { marginBottom: spacing.xs },
 })

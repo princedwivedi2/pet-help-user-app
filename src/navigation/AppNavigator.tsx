@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { NavigationContainerRef, NavigationContainer } from '@react-navigation/native'
+import { NavigationContainerRef, NavigationContainer, DefaultTheme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import * as Notifications from 'expo-notifications'
@@ -29,8 +29,11 @@ import SubscriptionPlansScreen from '../screens/Subscription/SubscriptionPlansSc
 import ChatScreen from '../screens/Chat/ChatScreen'
 import WalletScreen from '../screens/Payment/WalletScreen'
 import ServerSettingsScreen from '../screens/Dev/ServerSettingsScreen'
+import EmergencyScreen from '../screens/Emergency/EmergencyScreen'
+import { HelpSupportScreen, LegalAboutScreen, NotificationPreferencesScreen } from '../screens/Profile/ProductSettingsScreens'
 import { Ionicons } from '@expo/vector-icons'
-import { colors } from '../theme'
+import { View } from 'react-native'
+import { colors, radius } from '../theme'
 import { AuthProvider } from '../contexts/AuthProvider'
 import { setPostSignOutNav } from '../utils/authEvents'
 import { withSafeTop } from '../components/SafeScreen'
@@ -64,6 +67,10 @@ const WalletStack = withSafeTop(WalletScreen)
 const PaymentHistoryStack = withSafeTop(PaymentHistoryScreen)
 const PaymentDetailStack = withSafeTop(PaymentDetailScreen)
 const ServerSettingsStack = withSafeTop(ServerSettingsScreen)
+const EmergencyStack = withSafeTop(EmergencyScreen)
+const NotificationPreferencesStack = withSafeTop(NotificationPreferencesScreen)
+const HelpSupportStack = withSafeTop(HelpSupportScreen)
+const LegalAboutStack = withSafeTop(LegalAboutScreen)
 
 function MainTabs() {
   return (
@@ -71,9 +78,24 @@ function MainTabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.border },
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarInactiveTintColor: colors.subtle,
+        tabBarHideOnKeyboard: true,
+        tabBarLabelStyle: { fontSize: 9, lineHeight: 13, fontWeight: '700', marginBottom: 8 },
+        tabBarItemStyle: { paddingTop: 9 },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          borderTopLeftRadius: 25,
+          borderTopRightRadius: 25,
+          height: 88,
+          shadowColor: colors.dark,
+          shadowOpacity: 0.1,
+          shadowRadius: 22,
+          shadowOffset: { width: 0, height: -7 },
+          elevation: 10,
+        },
+        tabBarIcon: ({ focused, color }) => {
           type IoniconsName = React.ComponentProps<typeof Ionicons>['name']
           const iconMap: Record<string, [IoniconsName, IoniconsName]> = {
             Home: ['home', 'home-outline'],
@@ -83,13 +105,17 @@ function MainTabs() {
             Profile: ['person', 'person-outline'],
           }
           const [active, inactive] = iconMap[route.name] ?? ['help-circle', 'help-circle-outline']
-          return <Ionicons name={focused ? active : inactive} size={size} color={color} />
+          return (
+            <View style={{ width: 37, height: 29, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? colors.primary : 'transparent' }}>
+              <Ionicons name={focused ? active : inactive} size={20} color={focused ? colors.onPrimary : color} />
+            </View>
+          )
         },
       })}
     >
       <Tab.Screen name="Home" component={HomeTab} />
-      <Tab.Screen name="Search" component={SearchTab} />
-      <Tab.Screen name="Bookings" component={BookingsTab} />
+      <Tab.Screen name="Search" component={SearchTab} options={{ tabBarLabel: 'Find care' }} />
+      <Tab.Screen name="Bookings" component={BookingsTab} options={{ tabBarLabel: 'Appointments' }} />
       <Tab.Screen name="Pets" component={PetsTab} />
       <Tab.Screen name="Profile" component={ProfileTab} />
     </Tab.Navigator>
@@ -173,7 +199,11 @@ export default function AppNavigator() {
 
   return (
     <AuthProvider>
-      <NavigationContainer ref={navRef} linking={linking}>
+      <NavigationContainer
+        ref={navRef}
+        linking={linking}
+        theme={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.bg, card: colors.surface, primary: colors.primary, text: colors.text, border: colors.border, notification: colors.danger } }}
+      >
         <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Auth.Login" component={LoginStack} />
@@ -197,6 +227,10 @@ export default function AppNavigator() {
           <Stack.Screen name="Chat" component={ChatStack} />
           <Stack.Screen name="Wallet" component={WalletStack} />
           <Stack.Screen name="ServerSettings" component={ServerSettingsStack} />
+          <Stack.Screen name="Emergency" component={EmergencyStack} />
+          <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesStack} />
+          <Stack.Screen name="HelpSupport" component={HelpSupportStack} />
+          <Stack.Screen name="LegalAbout" component={LegalAboutStack} />
         </Stack.Navigator>
       </NavigationContainer>
     </AuthProvider>

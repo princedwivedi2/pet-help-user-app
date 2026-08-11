@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react'
 import { View, Text, TextInput, Alert, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import PrimaryButton from '../../components/PrimaryButton'
 import { login, register, sendOtp, verifyOtp, forgotPassword, resetPassword } from '../../services'
 import { useAuth } from '../../contexts/AuthProvider'
 import { useNavigation } from '@react-navigation/native'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { parseApiError } from '../../utils/apiError'
 
 export default function LoginScreen() {
@@ -218,8 +219,9 @@ export default function LoginScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <Text style={styles.wordmark}>RESPAW</Text>
-        <Text style={styles.tagline}>Care for your pet, anytime.</Text>
+        <View style={styles.brandIcon}><Ionicons name="paw" size={24} color={colors.primary} /></View>
+        <Text style={styles.wordmark}>respaw</Text>
+        <Text style={styles.tagline}>Better care. Happier paws.</Text>
       </View>
 
       <View style={styles.card}>
@@ -423,45 +425,49 @@ function Field({ label, value, onChangeText, onBlur, placeholder, keyboardType =
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: 48 },
   header: {
-    paddingVertical: 32,
-    paddingHorizontal: spacing.xl,
     backgroundColor: colors.primary,
-    borderRadius: 28,
-    marginBottom: spacing.lg,
+    borderRadius: radius.xl,
+    paddingVertical: 28,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
+    alignItems: 'center',
+    ...shadows.floating,
   },
+  brandIcon: { width: 48, height: 48, borderRadius: radius.lg, backgroundColor: colors.onPrimary, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
   wordmark: {
     color: colors.onPrimary,
-    fontSize: 42,
-    fontWeight: '800',
-    letterSpacing: -1.2,
-    fontFamily: 'serif',
+    fontSize: 40,
+    lineHeight: 44,
+    fontWeight: '900',
+    letterSpacing: -2,
+    textTransform: 'lowercase',
   },
-  tagline: { color: colors.onPrimary, marginTop: 6, fontSize: 15 },
+  tagline: { color: 'rgba(255,247,240,0.80)', marginTop: 4, ...typography.body },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
-    padding: spacing.lg,
+    padding: spacing.xl,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.card,
   },
-  title: { fontSize: 24, fontWeight: '800', color: colors.text },
-  subtitle: { marginTop: 6, color: colors.muted, lineHeight: 20 },
+  title: { ...typography.h1, color: colors.text },
+  subtitle: { marginTop: 6, ...typography.body, color: colors.muted },
   serverLink: { marginTop: 10, color: colors.primary, fontWeight: '700', fontSize: 13 },
-  segmentWrap: { flexDirection: 'row', gap: 8, marginTop: spacing.lg, marginBottom: spacing.lg },
+  segmentWrap: { flexDirection: 'row', gap: 6, marginTop: spacing.xl, marginBottom: spacing.xl, backgroundColor: colors.surfaceSoft, borderRadius: radius.md, padding: 4 },
   segment: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceSoft,
-    borderWidth: 1,
-    borderColor: colors.border,
+    minHeight: 42,
+    paddingVertical: 11,
+    borderRadius: radius.sm,
+    backgroundColor: 'transparent',
     alignItems: 'center',
   },
-  segmentActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  segmentText: { color: colors.muted, fontWeight: '700', fontSize: 12, letterSpacing: 0.6 },
-  segmentTextActive: { color: colors.surface },
+  segmentActive: { backgroundColor: colors.surface, ...shadows.card },
+  segmentText: { color: colors.muted, fontWeight: '700', fontSize: 11, letterSpacing: 0.5 },
+  segmentTextActive: { color: colors.primary },
   form: { gap: 14 },
   fieldWrap: { gap: 6 },
   fieldHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -469,12 +475,13 @@ const styles = StyleSheet.create({
   fieldAction: { color: colors.primary, fontWeight: '700', fontSize: 12 },
   fieldError: { color: colors.danger, fontSize: 12, marginTop: 4 },
   input: {
-    backgroundColor: colors.surfaceSoft,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    minHeight: 52,
+    paddingVertical: 14,
     color: colors.text,
   },
   link: { color: colors.primary, fontWeight: '700', textAlign: 'center', marginTop: 4 },

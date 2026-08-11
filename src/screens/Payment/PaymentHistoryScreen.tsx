@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, FlatList, Pressable, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import { getPayments } from '../../services'
 import { parseApiError } from '../../utils/apiError'
 import type { Payment } from '../../services/payments'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
-import { colors, radius, spacing } from '../../theme'
+import PageHeader from '../../components/PageHeader'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 
 function statusColor(s: Payment['status']): string {
   switch (s) {
@@ -86,12 +88,7 @@ export default function PaymentHistoryScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable onPress={() => nav.goBack()} style={styles.backBtn} hitSlop={8}>
-          <Text style={styles.backText}>← Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Payment history</Text>
-      </View>
+      <View style={styles.header}><PageHeader title="Payment history" subtitle="Receipts, refunds, and care payments" /></View>
 
       {error ? (
         <View style={styles.pad}>
@@ -106,6 +103,7 @@ export default function PaymentHistoryScreen() {
           ListEmptyComponent={<EmptyState emoji="💳" title="No payments yet" subtitle="Completed payments will appear here." />}
           renderItem={({ item }) => (
             <Pressable style={styles.row} onPress={() => nav.navigate('PaymentDetail', { paymentUuid: item.uuid })}>
+              <View style={styles.rowIcon}><Ionicons name={item.payable_type === 'consultation' ? 'videocam-outline' : 'receipt-outline'} size={19} color={colors.primary} /></View>
               <View style={styles.rowLeft}>
                 <Text style={styles.rowType}>{payableLabel(item.payable_type)}</Text>
                 <Text style={styles.rowDate}>{formatDate(item.created_at)}</Text>
@@ -116,6 +114,7 @@ export default function PaymentHistoryScreen() {
                   <Text style={[styles.badgeText, { color: statusColor(item.status) }]}>{statusLabel(item.status)}</Text>
                 </View>
               </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.subtle} />
             </Pressable>
           )}
         />
@@ -127,12 +126,9 @@ export default function PaymentHistoryScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: spacing.md },
-  backBtn: { marginBottom: spacing.sm },
-  backText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
+  header: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   pad: { padding: spacing.lg },
-  list: { padding: spacing.lg, paddingBottom: 48, gap: spacing.sm },
+  list: { padding: spacing.xl, paddingBottom: 48, gap: spacing.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -140,11 +136,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
+    padding: spacing.md,
+    gap: spacing.md,
+    ...shadows.card,
   },
+  rowIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   rowLeft: { flex: 1 },
-  rowType: { fontWeight: '700', color: colors.text, fontSize: 15 },
-  rowDate: { color: colors.muted, fontSize: 12, marginTop: 4 },
+  rowType: { ...typography.bodyStrong, color: colors.text },
+  rowDate: { ...typography.caption, color: colors.muted, marginTop: 3 },
   rowRight: { alignItems: 'flex-end', gap: 6 },
   rowAmount: { fontWeight: '900', color: colors.text, fontSize: 18 },
   badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },

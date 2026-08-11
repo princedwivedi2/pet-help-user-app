@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#FFFBF8" />
+  <title>Respaw — Home Design Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito+Sans:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --purple: #51237b;
+      --purple-pressed: #3f1764;
+      --purple-soft: #f1e8f7;
+      --purple-subtle: #f8f2fb;
+      --cream: #fff7f0;
+      --canvas: #fffbf8;
+      --surface: #ffffff;
+      --sunken: #f7f2f8;
+      --border: #e9e0eb;
+      --border-strong: #cdbed2;
+      --text: #251a2c;
+      --text-secondary: #695f70;
+      --text-tertiary: #8b818f;
+      --teal: #247c73;
+      --teal-soft: #e3f3f0;
+      --amber: #a76108;
+      --amber-soft: #fff0d2;
+      --danger: #b42318;
+      --danger-soft: #fde8e6;
+      --shadow-card: 0 8px 28px rgba(52, 28, 67, 0.08);
+      --shadow-nav: 0 -10px 36px rgba(52, 28, 67, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { background: #f2edf3; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(81, 35, 123, 0.07), transparent 24rem),
+        #f2edf3;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+    img { display: block; }
+
+    .stage {
+      min-height: 100dvh;
+      display: grid;
+      place-items: start center;
+      padding: 28px 16px;
+    }
+
+    .app {
+      position: relative;
+      width: min(100%, 430px);
+      min-height: 860px;
+      overflow: hidden;
+      background: var(--canvas);
+      border: 1px solid rgba(81, 35, 123, 0.10);
+      border-radius: 34px;
+      box-shadow: 0 24px 80px rgba(52, 28, 67, 0.18);
+    }
+
+    .content {
+      padding: 28px 20px 118px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1, h2, h3 {
+      font-family: "Nunito Sans", Inter, sans-serif;
+      letter-spacing: -0.025em;
+    }
+
+    h1 {
+      font-size: clamp(28px, 7.4vw, 34px);
+      line-height: 1.08;
+      font-weight: 900;
+    }
+
+    .subheading {
+      margin-top: 5px;
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .icon-button {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease;
+    }
+
+    .icon-button:hover { background: var(--purple-subtle); }
+    .icon-button:active { transform: scale(0.96); }
+    .icon-button svg { width: 23px; height: 23px; }
+
+    .notification-dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 8px;
+      height: 8px;
+      border: 2px solid white;
+      border-radius: 999px;
+      background: var(--purple);
+    }
+
+    .pet-context {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin-top: 22px;
+    }
+
+    .avatar {
+      width: 62px;
+      height: 62px;
+      flex: 0 0 auto;
+      overflow: hidden;
+      border: 3px solid var(--canvas);
+      border-radius: 999px;
+      box-shadow: 0 0 0 2px var(--purple);
+      background: var(--purple-soft);
+    }
+
+    .avatar img,
+    .vet-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .pet-name {
+      font-family: "Nunito Sans", Inter, sans-serif;
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .pet-meta {
+      margin-top: 2px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .appointment {
+      position: relative;
+      margin-top: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(81, 35, 123, 0.09);
+      border-radius: 28px;
+      background: var(--purple-soft);
+      padding: 20px;
+    }
+
+    .appointment::after {
+      content: "";
+      position: absolute;
+      right: -56px;
+      top: -72px;
+      width: 180px;
+      height: 180px;
+      border: 44px solid rgba(255, 255, 255, 0.35);
+      border-radius: 999px;
+      pointer-events: none;
+    }
+
+    .appointment-label {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--purple);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .appointment-label svg { width: 17px; height: 17px; }
+
+    .appointment-main {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 15px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .vet-photo {
+      width: 72px;
+      height: 82px;
+      overflow: hidden;
+      border-radius: 22px;
+      background: #d8c8e3;
+    }
+
+    .appointment h2 {
+      font-size: 21px;
+      font-weight: 900;
+      line-height: 1.16;
+    }
+
+    .appointment-time {
+      margin-top: 4px;
+      color: var(--purple);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .appointment-mode {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 7px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .appointment-mode svg { width: 17px; height: 17px; }
+
+    .primary-button {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      min-height: 50px;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 18px;
+      color: var(--cream);
+      background: var(--purple);
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(81, 35, 123, 0.18);
+      transition: transform 120ms ease, background 120ms ease;
+    }
+
+    .primary-button:hover { background: #5c288c; }
+    .primary-button:active { transform: scale(0.99); background: var(--purple-pressed); }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .quick-action {
+      min-width: 0;
+      min-height: 108px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: 22px;
+      background: var(--purple-subtle);
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .quick-action:hover { border-color: var(--border-strong); }
+    .quick-action:active { transform: scale(0.97); }
+    .quick-action svg { width: 28px; height: 28px; color: var(--purple); }
+    .quick-action span { font-size: 11px; line-height: 1.2; font-weight: 700; text-align: center; }
+    .quick-action.emergency { color: var(--danger); background: var(--danger-soft); }
+    .quick-action.emergency svg { color: var(--danger); }
+
+    .section { margin-top: 30px; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 13px;
+    }
+
+    .section-title { font-size: 21px; font-weight: 900; }
+
+    .text-action {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      border: 0;
+      padding: 0;
+      color: var(--purple);
+      background: transparent;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .text-action svg { width: 16px; height: 16px; }
+
+    .care-row {
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 100px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      transition: background 180ms ease, border-color 180ms ease;
+    }
+
+    .care-row.completed { background: var(--teal-soft); border-color: rgba(36, 124, 115, 0.22); }
+
+    .care-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      color: var(--purple);
+      background: var(--purple-soft);
+    }
+
+    .care-row.completed .care-icon { color: var(--teal); background: white; }
+    .care-icon svg { width: 25px; height: 25px; }
+    .due-label { color: var(--purple); font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .care-row.completed .due-label { color: var(--teal); }
+    .care-name { margin-top: 3px; font-family: "Nunito Sans", Inter, sans-serif; font-size: 15px; font-weight: 900; }
+    .care-meta { margin-top: 3px; color: var(--text-secondary); font-size: 11px; line-height: 1.35; }
+
+    .outline-button {
+      min-height: 42px;
+      padding: 0 13px;
+      border: 1.5px solid var(--purple);
+      border-radius: 15px;
+      color: var(--purple);
+      background: transparent;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .care-row.completed .outline-button { color: var(--teal); border-color: var(--teal); }
+
+    .vet-scroller {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 88%;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 2px 2px 8px;
+      margin: 0 -2px;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+
+    .vet-scroller::-webkit-scrollbar { display: none; }
+
+    .vet-card {
+      scroll-snap-align: start;
+      display: grid;
+      grid-template-columns: 76px 1fr 38px;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--surface);
+    }
+
+    .vet-card .vet-photo { width: 76px; height: 98px; border-radius: 18px; }
+    .vet-name { font-family: "Nunito Sans", Inter, sans-serif; font-size: 15px; font-weight: 900; line-height: 1.2; }
+    .vet-specialty { margin-top: 3px; color: var(--text-secondary); font-size: 11px; line-height: 1.35; }
+    .vet-stats { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--text-secondary); font-size: 11px; }
+    .rating-star { color: #eaa24a; }
+    .availability { display: inline-flex; align-items: center; gap: 4px; margin-top: 9px; padding: 5px 8px; border-radius: 9px; color: var(--purple); background: var(--purple-soft); font-size: 10px; font-weight: 700; }
+    .availability svg { width: 13px; height: 13px; }
+
+    .round-arrow {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 999px;
+      color: var(--purple);
+      background: var(--purple-soft);
+      cursor: pointer;
+    }
+
+    .round-arrow svg { width: 18px; height: 18px; }
+
+    .bottom-nav {
+      position: absolute;
+      inset: auto 0 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      min-height: 88px;
+      padding: 10px 8px max(12px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      border-radius: 26px 26px 0 0;
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: var(--shadow-nav);
+      backdrop-filter: blur(14px);
+    }
+
+    .nav-item {
+      min-width: 0;
+      min-height: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      border: 0;
+      border-radius: 16px;
+      color: var(--text-secondary);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .nav-icon {
+      width: 38px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+    }
+
+    .nav-item svg { width: 22px; height: 22px; }
+    .nav-item span:last-child { overflow: hidden; font-size: 9px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-item.active { color: var(--purple); }
+    .nav-item.active .nav-icon { color: white; background: var(--purple); }
+    .nav-item.active span:last-child { font-weight: 800; }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 104px;
+      z-index: 20;
+      max-width: calc(100% - 40px);
+      padding: 11px 15px;
+      border-radius: 14px;
+      color: white;
+      background: var(--text);
+      box-shadow: var(--shadow-card);
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0;
+      transform: translate(-50%, 12px);
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: flex-end;
+      background: rgba(37, 26, 44, 0.38);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+
+    .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+
+    .sheet {
+      width: 100%;
+      padding: 12px 20px 28px;
+      border-radius: 28px 28px 0 0;
+      background: var(--surface);
+      transform: translateY(24px);
+      transition: transform 220ms ease;
+    }
+
+    .sheet-backdrop.open .sheet { transform: translateY(0); }
+    .sheet-handle { width: 44px; height: 4px; margin: 0 auto 18px; border-radius: 999px; background: var(--border-strong); }
+    .sheet-title { font-size: 22px; font-weight: 900; }
+    .sheet-copy { margin-top: 5px; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+    .sheet-summary { display: grid; gap: 10px; margin-top: 20px; padding: 16px; border-radius: 18px; background: var(--purple-subtle); }
+    .summary-row { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; }
+    .summary-row span:first-child { color: var(--text-secondary); }
+    .summary-row strong { text-align: right; }
+    .sheet-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; margin-top: 18px; }
+    .sheet-actions button { min-height: 50px; margin: 0; }
+
+    :focus-visible { outline: 3px solid rgba(81, 35, 123, 0.35); outline-offset: 2px; }
+
+    @media (max-width: 370px) {
+      .content { padding-inline: 16px; }
+      .quick-actions { gap: 7px; }
+      .quick-action { min-height: 100px; border-radius: 18px; }
+      .quick-action span { font-size: 10px; }
+      .care-row { grid-template-columns: 44px 1fr; }
+      .care-row .outline-button { grid-column: 2; justify-self: start; }
+      .appointment-main { grid-template-columns: 64px 1fr; }
+      .vet-photo { width: 64px; }
+    }
+
+    @media (max-width: 600px) {
+      html, body { background: var(--canvas); }
+      .stage { display: block; padding: 0; }
+      .app { width: 100%; min-height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+      .bottom-nav { position: fixed; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="app" aria-label="Respaw mobile app home preview">
+      <div class="content">
+        <header class="topbar">
+          <div>
+            <h1>Good morning, Priya</h1>
+            <p class="subheading">How is Bruno today?</p>
+          </div>
+          <button class="icon-button" type="button" aria-label="Open notifications" data-message="You have 3 new notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+            <span class="notification-dot" aria-hidden="true"></span>
+          </button>
+        </header>
+
+        <div class="pet-context">
+          <div class="avatar">
+            <img src="https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=240&q=88" alt="Bruno, a golden retriever" />
+          </div>
+          <div>
+            <div class="pet-name">Bruno</div>
+            <div class="pet-meta">Golden Retriever · 3 years</div>
+          </div>
+        </div>
+
+        <article class="appointment">
+          <div class="appointment-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+            Next appointment
+          </div>
+          <div class="appointment-main">
+            <div class="vet-photo">
+              <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=260&q=88" alt="Dr. Ananya Rao" />
+            </div>
+            <div>
+              <h2>Dr. Ananya Rao</h2>
+              <div class="appointment-time">Today, 4:30 PM</div>
+              <div class="appointment-mode">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="14" height="14" rx="3"/><path d="m17 9 4-2v10l-4-2z"/></svg>
+                Video consultation
+              </div>
+            </div>
+          </div>
+          <button class="primary-button" type="button" id="appointmentButton">View details</button>
+        </article>
+
+        <nav class="quick-actions" aria-label="Care shortcuts">
+          <button class="quick-action" type="button" data-message="Opening nearby veterinary care">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M6 21v-2a6 6 0 0 1 12 0v2M4 5h4M6 3v4"/></svg>
+            <span>Find a vet</span>
+          </button>
+          <button class="quick-action" type="button" data-message="Choose video, audio, or chat consultation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H6l-3 2 1-4a8 8 0 1 1 17-6Z"/><rect x="8" y="9" width="6" height="6" rx="1.5"/><path d="m14 11 3-1.5v5L14 13"/></svg>
+            <span>Online consult</span>
+          </button>
+          <button class="quick-action" type="button" data-message="Opening Bruno's health records">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><path d="M10 16c.6-1 1.2-1.5 2-1.5s1.4.5 2 1.5"/></svg>
+            <span>Records</span>
+          </button>
+          <button class="quick-action emergency" type="button" data-message="Emergency care options are ready">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>
+            <span>Emergency</span>
+          </button>
+        </nav>
+
+        <section class="section" aria-labelledby="care-title">
+          <div class="section-header">
+            <h2 class="section-title" id="care-title">Care today</h2>
+            <button class="text-action" type="button" data-message="Showing all care tasks">
+              View all
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+          <article class="care-row" id="careRow">
+            <div class="care-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 4.5 10 10a4 4 0 0 1-5.7 5.6l-10-10a4 4 0 0 1 5.7-5.6Z"/><path d="m8 15 7-7"/></svg>
+            </div>
+            <div>
+              <div class="due-label" id="dueLabel">Due now</div>
+              <div class="care-name">Bravecto Chewable</div>
+              <div class="care-meta">Flea &amp; tick prevention · 1 chewable · With food</div>
+            </div>
+            <button class="outline-button" type="button" id="careButton">Mark as given</button>
+          </article>
+        </section>
+
+        <section class="section" aria-labelledby="vets-title">
+          <div class="section-header">
+            <h2 class="section-title" id="vets-title">Nearby vets</h2>
+            <button class="text-action" type="button" data-message="Opening all nearby vets">
+              View all
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+          <div class="vet-scroller" aria-label="Nearby vets">
+            <article class="vet-card">
+              <div class="vet-photo">
+                <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=260&q=88" alt="Dr. Meera Iyer" />
+              </div>
+              <div>
+                <div class="vet-name">Dr. Meera Iyer</div>
+                <div class="vet-specialty">Small animal practice</div>
+                <div class="vet-stats"><span class="rating-star">★</span><strong>4.7</strong><span>(128)</span><span>·</span><span>1.2 km</span></div>
+                <div class="availability">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  Today, 5:15 PM
+                </div>
+              </div>
+              <button class="round-arrow" type="button" aria-label="View Dr. Meera Iyer" data-message="Opening Dr. Meera Iyer's profile">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </article>
+            <article class="vet-card">
+              <div class="vet-photo">
+                <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=260&q=88" alt="Dr. Arjun Nair" />
+              </div>
+              <div>
+                <div class="vet-name">Dr. Arjun Nair</div>
+                <div class="vet-specialty">Veterinary care</div>
+                <div class="vet-stats"><span class="rating-star">★</span><strong>4.6</strong><span>(95)</span><span>·</span><span>2.1 km</span></div>
+                <div class="availability">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  Tomorrow, 9:00 AM
+                </div>
+              </div>
+              <button class="round-arrow" type="button" aria-label="View Dr. Arjun Nair" data-message="Opening Dr. Arjun Nair's profile">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <nav class="bottom-nav" aria-label="Primary navigation">
+        <button class="nav-item active" type="button" data-label="Home">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8v9.1a1.1 1.1 0 0 1-1.1 1.1h-5.2v-6.2H9.3V21H4.1A1.1 1.1 0 0 1 3 19.9Z"/></svg></span>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" type="button" data-label="Find care">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></span>
+          <span>Find care</span>
+        </button>
+        <button class="nav-item" type="button" data-label="Appointments">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span>
+          <span>Appointments</span>
+        </button>
+        <button class="nav-item" type="button" data-label="Pets">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="16" rx="5" ry="4"/><circle cx="6.5" cy="9" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="6" r="2"/><circle cx="17.5" cy="9" r="2"/></svg></span>
+          <span>Pets</span>
+        </button>
+        <button class="nav-item" type="button" data-label="Profile">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+          <span>Profile</span>
+        </button>
+      </nav>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+      <div class="sheet-backdrop" id="appointmentSheet" aria-hidden="true">
+        <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <h2 class="sheet-title" id="sheetTitle">Your next appointment</h2>
+          <p class="sheet-copy">Everything is ready for Bruno's video consultation.</p>
+          <div class="sheet-summary">
+            <div class="summary-row"><span>Veterinarian</span><strong>Dr. Ananya Rao</strong></div>
+            <div class="summary-row"><span>Pet</span><strong>Bruno</strong></div>
+            <div class="summary-row"><span>When</span><strong>Today, 4:30 PM</strong></div>
+            <div class="summary-row"><span>Type</span><strong>Video consultation</strong></div>
+          </div>
+          <div class="sheet-actions">
+            <button class="outline-button" type="button" id="closeSheet">Close</button>
+            <button class="primary-button" type="button" data-message="Join will be available 5 minutes before your appointment">Prepare to join</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    document.querySelectorAll('[data-message]').forEach((control) => {
+      control.addEventListener('click', () => showToast(control.dataset.message));
+    });
+
+    document.querySelectorAll('.nav-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach((navItem) => navItem.classList.remove('active'));
+        item.classList.add('active');
+        showToast(`${item.dataset.label} selected — preview stays on Home`);
+      });
+    });
+
+    const careRow = document.getElementById('careRow');
+    const careButton = document.getElementById('careButton');
+    const dueLabel = document.getElementById('dueLabel');
+
+    careButton.addEventListener('click', () => {
+      const completed = careRow.classList.toggle('completed');
+      dueLabel.textContent = completed ? 'Given today' : 'Due now';
+      careButton.textContent = completed ? 'Undo' : 'Mark as given';
+      showToast(completed ? 'Bravecto marked as given' : 'Care task restored');
+    });
+
+    const sheet = document.getElementById('appointmentSheet');
+    const appointmentButton = document.getElementById('appointmentButton');
+    const closeSheet = document.getElementById('closeSheet');
+
+    function setSheet(open) {
+      sheet.classList.toggle('open', open);
+      sheet.setAttribute('aria-hidden', String(!open));
+      if (open) closeSheet.focus();
+    }
+
+    appointmentButton.addEventListener('click', () => setSheet(true));
+    closeSheet.addEventListener('click', () => setSheet(false));
+    sheet.addEventListener('click', (event) => {
+      if (event.target === sheet) setSheet(false);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setSheet(false);
+    });
+  </script>
+</body>
+</html>

@@ -12,7 +12,7 @@ export class ApiError extends Error {
  */
 export function parseApiError(e: unknown): string {
   if (e instanceof ApiError) {
-    if (e.status === 401) return 'Your session has expired. Please sign in again.'
+    if (e.status === 401) return e.message || 'Your session has expired. Please sign in again.'
     if (e.status === 403) return 'You don\'t have permission to do that.'
     if (e.status === 422) {
       // Prefer the first field-level message if present

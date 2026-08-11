@@ -61,7 +61,7 @@ export default function ServerSettingsScreen() {
 
       <Text style={styles.subtitle}>
         Point the app at your backend. Use your computer's LAN IP and port (the phone and
-        computer must be on the same Wi-Fi). Example: http://192.168.1.50:8002/api/v1
+        computer must be on the same Wi-Fi). Example: https://api.respaw.in/api/v1
       </Text>
 
       <View style={styles.card}>
@@ -69,7 +69,7 @@ export default function ServerSettingsScreen() {
         <TextInput
           value={value}
           onChangeText={(v) => { setValue(v); setSaved(''); setTestResult(null) }}
-          placeholder="http://192.168.1.50:8002/api/v1"
+          placeholder="https://api.respaw.in/api/v1"
           placeholderTextColor={colors.muted}
           autoCapitalize="none"
           autoCorrect={false}

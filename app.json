@@ -6,9 +6,9 @@
     "orientation": "portrait",
     "version": "1.0.0",
     "userInterfaceStyle": "light",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/respaw-logo.jpg",
     "extra": {
-      "apiUrl": "http://10.253.208.41:8002/api/v1"
+      "apiUrl": "https://api.respaw.in/api/v1"
     },
     "plugins": [
       "expo-asset",
@@ -24,10 +24,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/respaw-logo.jpg",
+          "imageWidth": 280,
           "resizeMode": "contain",
-          "backgroundColor": "#fff7f1"
+          "backgroundColor": "#51237b"
         }
       ],
       [
@@ -41,7 +41,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#ff6b2c",
+          "color": "#51237b",
           "sounds": []
         }
       ],
@@ -60,14 +60,10 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
       ],
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ff6b2c"
-      },
       "package": "com.anonymous.respawuserapp"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/respaw-logo.jpg"
     }
   }
 }

@@ -47,8 +47,15 @@ export async function request<T = unknown>(path: string, options: RequestInit = 
   // Parse body (best-effort — some endpoints return empty 204)
   const body: ApiResponse<T> = await res.json().catch(() => ({} as ApiResponse<T>))
 
-  // 401 — session expired or invalid token
+  // 401 — on public auth endpoints this means bad credentials (NOT an expired
+  // session), so surface the real message and do NOT trigger a global sign-out.
   if (res.status === 401) {
+    const p = String(path)
+    const isAuthEndpoint = ['/auth/login', '/auth/register', '/auth/otp/send', '/auth/otp/verify', '/auth/forgot-password', '/auth/reset-password']
+      .some((a) => p === a || p.startsWith(`${a}?`))
+    if (isAuthEndpoint) {
+      throw new ApiError(body.message || 'Invalid credentials. Please check your details and try again.', 401)
+    }
     fireUnauthorized()
     throw new ApiError(body.message || 'Your session has expired. Please sign in again.', 401)
   }

@@ -1,20 +1,32 @@
 import React from 'react'
-import { TouchableOpacity, Text } from 'react-native'
-import { colors, radius } from '../theme'
+import { Pressable, StyleSheet, Text } from 'react-native'
+import { colors, radius, typography } from '../theme'
 
 export default function PrimaryButton({ title, onPress, disabled = false }: { title: string; onPress?: () => void; disabled?: boolean }) {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={{
-        backgroundColor: disabled ? colors.border : colors.primary,
-        paddingVertical: 14,
-        borderRadius: radius.md,
-        opacity: disabled ? 0.7 : 1,
-      }}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.button, disabled && styles.disabled, pressed && !disabled && styles.pressed]}
     >
-      <Text style={{ color: '#fff7f1', textAlign: 'center', fontWeight: '800' }}>{title}</Text>
-    </TouchableOpacity>
+      <Text style={[styles.label, disabled && styles.disabledLabel]}>{title}</Text>
+    </Pressable>
   )
 }
+
+const styles = StyleSheet.create({
+  button: {
+    minHeight: 54,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  pressed: { backgroundColor: colors.primaryPressed, transform: [{ scale: 0.99 }] },
+  disabled: { backgroundColor: colors.border, opacity: 0.85 },
+  label: { ...typography.bodyStrong, color: colors.onPrimary, textAlign: 'center' },
+  disabledLabel: { color: colors.subtle },
+})

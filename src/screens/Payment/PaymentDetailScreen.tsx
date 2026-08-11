@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native'
-import { useNavigation, useRoute } from '@react-navigation/native'
+import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { useRoute } from '@react-navigation/native'
 import { getPayment } from '../../services'
 import type { Payment } from '../../services/payments'
 import ErrorCard from '../../components/ErrorCard'
-import { colors, radius, spacing } from '../../theme'
+import PageHeader from '../../components/PageHeader'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 
 function statusColor(s: Payment['status']): string {
   switch (s) {
@@ -47,7 +49,6 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export default function PaymentDetailScreen() {
-  const nav = useNavigation<any>()
   const route = useRoute<any>()
   const { paymentUuid } = (route.params || {}) as { paymentUuid: string }
 
@@ -80,25 +81,21 @@ export default function PaymentDetailScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Pressable onPress={() => nav.goBack()} style={styles.backBtn} hitSlop={8}>
-          <Text style={styles.backText}>← Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Payment details</Text>
-      </View>
+      <PageHeader title="Payment details" subtitle="A clear record of this transaction" />
 
       {error ? (
         <ErrorCard message={error} onRetry={load} />
       ) : payment ? (
         <>
           <View style={[styles.statusBanner, { backgroundColor: statusColor(payment.status) + '18', borderColor: statusColor(payment.status) + '55' }]}>
+            <Ionicons name={payment.status === 'paid' ? 'checkmark-circle' : payment.status === 'failed' ? 'alert-circle' : 'time'} size={20} color={statusColor(payment.status)} />
             <Text style={[styles.statusText, { color: statusColor(payment.status) }]}>
               {statusLabel(payment.status)}
             </Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.amountLabel}>Amount</Text>
+            <View style={styles.amountHeader}><View style={styles.amountIcon}><Ionicons name="receipt-outline" size={20} color={colors.primary} /></View><Text style={styles.amountLabel}>TOTAL PAID</Text></View>
             <Text style={styles.amount}>₹{(payment.amount / 100).toFixed(0)}</Text>
 
             <View style={styles.divider} />
@@ -134,17 +131,16 @@ export default function PaymentDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
+  content: { padding: spacing.xl, paddingBottom: 48 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  header: { marginBottom: spacing.lg },
-  backBtn: { marginBottom: spacing.sm },
-  backText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
   statusBanner: {
     borderRadius: radius.lg,
     borderWidth: 1,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
   statusText: { fontWeight: '800', fontSize: 16 },
@@ -155,10 +151,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
     marginBottom: spacing.md,
+    ...shadows.card,
   },
   cardTitle: { fontWeight: '800', color: colors.text, fontSize: 15, marginBottom: spacing.sm },
-  amountLabel: { color: colors.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 },
-  amount: { fontSize: 40, fontWeight: '900', color: colors.text, marginTop: 4 },
+  amountHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  amountIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
+  amountLabel: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  amount: { fontSize: 42, fontWeight: '900', color: colors.text, marginTop: spacing.md, letterSpacing: -1.2 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   row: {
     flexDirection: 'row',
@@ -167,7 +166,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  rowLabel: { color: colors.muted, fontSize: 13, flex: 1 },
-  rowValue: { color: colors.text, fontWeight: '700', flex: 1, textAlign: 'right', fontSize: 13 },
+  rowLabel: { ...typography.caption, color: colors.muted, flex: 1 },
+  rowValue: { ...typography.caption, color: colors.text, fontWeight: '700', flex: 1, textAlign: 'right' },
   refundNote: { marginTop: spacing.sm, color: colors.muted, lineHeight: 18, fontSize: 13 },
 })

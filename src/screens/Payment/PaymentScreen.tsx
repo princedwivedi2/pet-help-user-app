@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, Pressable, ActivityIndicator, StyleSheet, Alert } from 'react-native'
+import { View, Text, ActivityIndicator, StyleSheet, Alert } from 'react-native'
 import ErrorCard from '../../components/ErrorCard'
+import PageHeader from '../../components/PageHeader'
 import { createPaymentOrder, verifyPayment, mockConfirmPayment } from '../../services'
 import { createSubscriptionOrder, verifySubscription } from '../../services/subscriptions'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { colors, radius, spacing } from '../../theme'
+import { colors, spacing } from '../../theme'
 import { WebView } from 'react-native-webview'
 import { parseApiError } from '../../utils/apiError'
 
@@ -193,10 +194,10 @@ export default function PaymentScreen() {
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #fff7f1; color: #0f172a; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #fffbf8; color: #251a2c; }
             .wrap { padding: 24px; }
-            .card { background: #fff; border-radius: 20px; padding: 20px; border: 1px solid #f4e3d5; box-shadow: 0 12px 30px rgba(15,23,42,0.06); }
-            .btn { width: 100%; border: 0; border-radius: 14px; padding: 14px 16px; background: #ff6b2c; color: #fff7f1; font-size: 16px; font-weight: 700; cursor: pointer; }
+            .card { background: #fff; border-radius: 20px; padding: 20px; border: 1px solid #e9e0eb; box-shadow: 0 12px 30px rgba(48,19,66,0.08); }
+            .btn { width: 100%; border: 0; border-radius: 14px; padding: 14px 16px; background: #51237b; color: #fff7f0; font-size: 16px; font-weight: 700; cursor: pointer; }
             .btn:disabled { opacity: 0.5; }
           </style>
         </head>
@@ -220,7 +221,7 @@ export default function PaymentScreen() {
                 order_id: ${JSON.stringify(orderId)},
                 amount: ${JSON.stringify(orderAmount)},
                 currency: 'INR',
-                name: 'Pet Help',
+                name: 'Respaw',
                 description: ${JSON.stringify(appointment?.reason || 'Appointment booking')},
                 handler: function (response) {
                   window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -236,7 +237,7 @@ export default function PaymentScreen() {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ dismissed: true }));
                   }
                 },
-                theme: { color: '#ff6b2c' }
+                theme: { color: '#51237b' }
               };
               var checkout = new Razorpay(options);
               checkout.on('payment.failed', function (response) {
@@ -271,10 +272,7 @@ export default function PaymentScreen() {
   return (
     <View style={styles.screen}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable onPress={() => nav.goBack()} style={styles.backBtn} hitSlop={8}>
-          <Text style={styles.backText}>← Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Payment</Text>
+        <PageHeader title="Secure payment" subtitle="Complete your booking safely" />
       </View>
 
       {orderError ? (
@@ -305,10 +303,7 @@ export default function PaymentScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  backBtn: { marginBottom: spacing.sm },
-  backText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
+  header: { paddingHorizontal: spacing.lg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, gap: spacing.md },
   loadingLabel: { color: colors.muted, marginTop: spacing.sm },
   webview: { flex: 1 },

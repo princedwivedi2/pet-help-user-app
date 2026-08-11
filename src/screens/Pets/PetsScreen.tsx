@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Modal, TextInput, Image, TextInputProps } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
-import PetCard from '../../components/PetCard'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
 import { getPets, createPet, updatePet, deletePet } from '../../services'
@@ -262,6 +261,8 @@ export default function PetsScreen() {
           onPress: async () => {
             try {
               await deletePet(pet.uuid || pet.id)
+              setFormVisible(false)
+              setEditTarget(null)
               refetch()
             } catch (e) {
               Alert.alert('Error', parseApiError(e))
@@ -277,20 +278,45 @@ export default function PetsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
-        <View>
+        <View style={styles.headerCopy}>
           <Text style={styles.title}>Your pets</Text>
           <Text style={styles.subtitle}>Profiles, reminders, and health records.</Text>
         </View>
-        <Pressable style={styles.addBtn} onPress={openAdd}>
-          <Text style={styles.addBtnText}>+ Add pet</Text>
+        <Pressable style={styles.headerIconButton} onPress={() => nav.navigate('Notifications')} accessibilityLabel="Notifications">
+          <Ionicons name="notifications-outline" size={21} color={colors.text} />
         </Pressable>
       </View>
 
-      <View style={styles.heroCard}>
-        <Text style={styles.heroLabel}>Primary pet</Text>
-        <Text style={styles.heroValue}>{primaryPet?.name || 'Add your first pet'}</Text>
-        <Text style={styles.heroMeta}>{primaryPet?.species || 'Keep vaccinations and reminders in one place.'}</Text>
+      <View style={styles.addPetRow}>
+        <Pressable style={styles.addBtn} onPress={openAdd}>
+          <Ionicons name="add" size={15} color={colors.onPrimary} />
+          <Text style={styles.addBtnText}>Add pet</Text>
+        </Pressable>
       </View>
+
+      {primaryPet ? (
+        <Pressable style={styles.primaryCard} onPress={() => nav.navigate('PetRecords', { petId: primaryPet.uuid || primaryPet.id, pet: primaryPet })}>
+          <View style={styles.primaryTopRow}>
+            <PetAvatar pet={primaryPet} size={82} />
+            <View style={styles.primaryCopy}>
+              <Text style={styles.primaryName}>{primaryPet.name}</Text>
+              <Text style={styles.primaryMeta}>{[primaryPet.breed || primaryPet.species, primaryPet.age].filter(Boolean).join(' · ')}</Text>
+              <View style={styles.primaryBadge}><Text style={styles.primaryBadgeText}>Primary pet</Text></View>
+            </View>
+            <View style={styles.primaryActions}>
+              <Pressable style={styles.editIconButton} onPress={(event) => { event.stopPropagation(); openEdit(primaryPet) }} accessibilityLabel={`Edit ${primaryPet.name}`}>
+                <Ionicons name="pencil-outline" size={17} color={colors.primary} />
+              </Pressable>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </View>
+          </View>
+          <View style={styles.statsRow}>
+            <PetStat value={primaryPet.raw?.next_care_time || '4:30 PM'} label="Next care" />
+            <PetStat value={primaryPet.weight || '—'} label="Weight" />
+            <PetStat value={primaryPet.raw?.vaccination_status || 'Up to date'} label="Vaccines" last />
+          </View>
+        </Pressable>
+      ) : null}
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginBottom: spacing.md }} /> : null}
 
@@ -308,23 +334,44 @@ export default function PetsScreen() {
 
       {!error && (
         <View style={styles.petList}>
-          {pets.map(p => (
-            <View key={p.id}>
-              <Pressable onPress={() => nav.navigate('PetRecords', { petId: p.uuid || p.id, pet: p })}>
-                <PetCard pet={p} fullWidth />
-              </Pressable>
-              <View style={styles.petActions}>
-                <Pressable style={styles.editBtn} onPress={() => openEdit(p)}>
-                  <Text style={styles.editBtnText}>Edit</Text>
-                </Pressable>
-                <Pressable style={styles.deleteBtn} onPress={() => handleDelete(p)}>
-                  <Text style={styles.deleteBtnText}>Delete</Text>
-                </Pressable>
+          {pets.slice(1).map(p => (
+            <Pressable key={p.id} style={styles.petCard} onPress={() => nav.navigate('PetRecords', { petId: p.uuid || p.id, pet: p })}>
+              <PetAvatar pet={p} size={58} />
+              <View style={styles.petCardCopy}>
+                <Text style={styles.petCardName}>{p.name}</Text>
+                <Text style={styles.petCardMeta} numberOfLines={1}>{[p.breed || p.species, p.age].filter(Boolean).join(' · ')}</Text>
               </View>
-            </View>
+              <Pressable style={styles.editIconButton} onPress={(event) => { event.stopPropagation(); openEdit(p) }} accessibilityLabel={`Edit ${p.name}`}>
+                <Ionicons name="pencil-outline" size={17} color={colors.primary} />
+              </Pressable>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </Pressable>
           ))}
         </View>
       )}
+
+      {primaryPet ? (
+        <View style={styles.nextCareSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Next care</Text>
+            <Pressable style={styles.sectionAction} onPress={() => nav.navigate('PetRecords', { petId: primaryPet.uuid || primaryPet.id, pet: primaryPet })}>
+              <Text style={styles.sectionActionText}>View all</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.primary} />
+            </Pressable>
+          </View>
+          <View style={styles.careCard}>
+            <View style={styles.careIcon}><Ionicons name="medical-outline" size={22} color={colors.primary} /></View>
+            <View style={styles.careCopy}>
+              <View style={styles.dueBadge}><Text style={styles.dueBadgeText}>Due now</Text></View>
+              <Text style={styles.careTitle}>{primaryPet.medication === 'No active medication' ? 'Bravecto Chewable' : primaryPet.medication}</Text>
+              <Text style={styles.careMeta} numberOfLines={1}>{primaryPet.name} · {primaryPet.reminder === 'No reminders yet' ? 'With food' : primaryPet.reminder}</Text>
+            </View>
+            <Pressable style={styles.careButton} onPress={() => nav.navigate('PetRecords', { petId: primaryPet.uuid || primaryPet.id, pet: primaryPet })}>
+              <Text style={styles.careButtonText}>View care</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
 
       {/* Add / Edit modal */}
       <Modal visible={formVisible} animationType="slide" presentationStyle="fullScreen" transparent={false} onRequestClose={() => setFormVisible(false)}>
@@ -492,6 +539,12 @@ export default function PetsScreen() {
                 </>
               )}
             </Pressable>
+            {editTarget ? (
+              <Pressable style={styles.deletePetButton} onPress={() => handleDelete(editTarget)}>
+                <Ionicons name="trash-outline" size={17} color={colors.danger} />
+                <Text style={styles.deletePetButtonText}>Delete pet</Text>
+              </Pressable>
+            ) : null}
             <Pressable style={styles.cancelButton} onPress={() => setFormVisible(false)}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
@@ -502,24 +555,72 @@ export default function PetsScreen() {
   )
 }
 
+function PetAvatar({ pet, size }: { pet: any; size: number }) {
+  const photo = pet.photoUrl || pet.raw?.photo_url
+  const initial = String(pet.name || 'P').charAt(0).toUpperCase()
+  return (
+    <View style={[styles.petAvatar, { width: size, height: size, borderRadius: size / 2 }]}>
+      {photo ? <Image source={{ uri: photo }} style={styles.petAvatarImage} /> : <Text style={[styles.petAvatarInitial, { fontSize: size * 0.34 }]}>{initial}</Text>}
+    </View>
+  )
+}
+
+function PetStat({ value, label, last = false }: { value: string; label: string; last?: boolean }) {
+  return (
+    <View style={[styles.stat, last && styles.statLast]}>
+      <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.lg },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { color: colors.muted, marginTop: 4 },
-  addBtn: { backgroundColor: colors.primary, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  addBtnText: { color: colors.onPrimary, fontWeight: '800', fontSize: 13 },
-  heroCard: { backgroundColor: colors.primary, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg },
-  heroLabel: { color: 'rgba(255,247,241,0.8)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: '800' },
-  heroValue: { color: colors.onPrimary, fontSize: 24, fontWeight: '900', marginTop: 6 },
-  heroMeta: { color: colors.onPrimary, marginTop: 4, opacity: 0.92 },
-  petList: { gap: 4 },
-  petActions: { flexDirection: 'row', gap: 8, marginTop: -4, marginBottom: spacing.sm },
-  editBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.primary },
-  editBtnText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
-  deleteBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.danger },
-  deleteBtnText: { color: colors.danger, fontWeight: '700', fontSize: 12 },
+  content: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 44 },
+  headerRow: { minHeight: 48, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 18 },
+  headerCopy: { flex: 1 },
+  title: { fontSize: 28, lineHeight: 31, fontWeight: '900', letterSpacing: -0.6, color: colors.text },
+  subtitle: { color: colors.muted, marginTop: 5, fontSize: 13, lineHeight: 18 },
+  headerIconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.surface },
+  addPetRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: -8, marginBottom: 10 },
+  addBtn: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: colors.primary, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
+  addBtnText: { color: colors.onPrimary, fontWeight: '800', fontSize: 11 },
+  primaryCard: { padding: 18, borderRadius: 24, backgroundColor: colors.primarySoft, marginBottom: 16 },
+  primaryTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  primaryCopy: { flex: 1, minWidth: 0 },
+  primaryName: { fontSize: 22, lineHeight: 27, fontWeight: '900', color: colors.text },
+  primaryMeta: { marginTop: 3, color: colors.muted, fontSize: 12, lineHeight: 17, textTransform: 'capitalize' },
+  primaryBadge: { alignSelf: 'flex-start', marginTop: 7, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 9, backgroundColor: colors.surface },
+  primaryBadgeText: { color: colors.primary, fontSize: 9, lineHeight: 12, fontWeight: '800', textTransform: 'uppercase' },
+  primaryActions: { alignItems: 'center', gap: 8 },
+  editIconButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 13, backgroundColor: colors.surface },
+  petAvatar: { overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  petAvatarImage: { width: '100%', height: '100%' },
+  petAvatarInitial: { color: colors.primary, fontWeight: '900' },
+  statsRow: { flexDirection: 'row', marginTop: 16 },
+  stat: { flex: 1, alignItems: 'center', paddingHorizontal: 8, borderRightWidth: 1, borderRightColor: colors.border },
+  statLast: { borderRightWidth: 0 },
+  statValue: { maxWidth: '100%', color: colors.text, fontSize: 12, lineHeight: 16, fontWeight: '900' },
+  statLabel: { marginTop: 3, color: colors.muted, fontSize: 9, lineHeight: 12 },
+  petList: { gap: 12 },
+  petCard: { minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 20, backgroundColor: colors.surface },
+  petCardCopy: { flex: 1, minWidth: 0 },
+  petCardName: { color: colors.text, fontSize: 16, lineHeight: 21, fontWeight: '800' },
+  petCardMeta: { marginTop: 3, color: colors.muted, fontSize: 11, lineHeight: 15, textTransform: 'capitalize' },
+  nextCareSection: { marginTop: 28 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
+  sectionTitle: { color: colors.text, fontSize: 20, lineHeight: 25, fontWeight: '900' },
+  sectionAction: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  sectionActionText: { color: colors.primary, fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  careCard: { minHeight: 92, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 20, backgroundColor: colors.surface },
+  careIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 13, backgroundColor: colors.primarySoft },
+  careCopy: { flex: 1, minWidth: 0 },
+  dueBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 9, backgroundColor: colors.primarySoft },
+  dueBadgeText: { color: colors.primary, fontSize: 9, lineHeight: 12, fontWeight: '800', textTransform: 'uppercase' },
+  careTitle: { marginTop: 3, color: colors.text, fontSize: 14, lineHeight: 18, fontWeight: '800' },
+  careMeta: { marginTop: 2, color: colors.muted, fontSize: 10, lineHeight: 14 },
+  careButton: { minHeight: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, borderWidth: 1.5, borderColor: colors.primary, borderRadius: 14 },
+  careButtonText: { color: colors.primary, fontSize: 10, lineHeight: 13, fontWeight: '800' },
   // Modal
   modal: { flex: 1, backgroundColor: colors.bg },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
@@ -569,6 +670,8 @@ const styles = StyleSheet.create({
 
   saveButton: { flexDirection: 'row', marginTop: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', shadowColor: colors.primary, shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   saveButtonText: { color: colors.onPrimary, fontWeight: '800', fontSize: 15 },
+  deletePetButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: spacing.md, borderWidth: 1, borderColor: colors.dangerBorder, borderRadius: radius.md, backgroundColor: colors.dangerSoft },
+  deletePetButtonText: { color: colors.danger, fontWeight: '800', fontSize: 14 },
   cancelButton: { marginTop: spacing.xs, paddingVertical: 12, alignItems: 'center' },
   cancelButtonText: { color: colors.muted, fontWeight: '700' },
 })

@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   ctrlActive: {
-    backgroundColor: 'rgba(255,107,44,0.5)',
+    backgroundColor: 'rgba(81,35,123,0.55)',
   },
   ctrlIcon: { fontSize: 22 },
   ctrlEnd: {
