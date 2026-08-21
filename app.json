@@ -8,7 +8,10 @@
     "userInterfaceStyle": "light",
     "icon": "./assets/respaw-logo.jpg",
     "extra": {
-      "apiUrl": "https://api.respaw.in/api/v1"
+      "apiUrl": "https://api.respaw.in/api/v1",
+      "eas": {
+        "projectId": "85cc6d13-f58d-4cc3-989e-0c2203ee2f07"
+      }
     },
     "plugins": [
       "expo-asset",
@@ -52,6 +55,17 @@
         }
       ]
     ],
+    "ios": {
+      "bundleIdentifier": "com.respaw.user",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow RESPAW to use the camera so you can take a photo of your pet.",
+        "NSPhotoLibraryUsageDescription": "Allow RESPAW to access your photos so you can set a picture for your pet.",
+        "NSMicrophoneUsageDescription": "Allow RESPAW to use your microphone for audio/video consultations.",
+        "NSLocationWhenInUseUsageDescription": "Allow RESPAW to use your location to find vet clinics near you.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow RESPAW to use your location to find vet clinics near you."
+      }
+    },
     "android": {
       "permissions": [
         "android.permission.RECORD_AUDIO",
@@ -60,7 +74,7 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
       ],
-      "package": "com.anonymous.respawuserapp"
+      "package": "com.respaw.user"
     },
     "web": {
       "favicon": "./assets/respaw-logo.jpg"

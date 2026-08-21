@@ -77,6 +77,7 @@ export default function PaymentScreen() {
                 scheduledAt: scheduledAt ?? appointment?.scheduled_at,
                 appointmentType: appointmentType ?? appointment?.appointment_type,
                 amount,
+                status: appointment?.status,
               })
             }
           } else {
@@ -139,6 +140,7 @@ export default function PaymentScreen() {
             scheduledAt: scheduledAt ?? appointment?.scheduled_at,
             appointmentType: appointmentType ?? appointment?.appointment_type,
             amount,
+            status: appointment?.status,
           })
         }
       } else {

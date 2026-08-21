@@ -8,8 +8,8 @@ import PrimaryButton from '../../components/PrimaryButton'
 export default function ConfirmationScreen() {
   const nav = useNavigation<any>()
   const route = useRoute<any>()
-  const { appointmentUuid, vetName, scheduledAt, appointmentType, amount, consultationId } = (route.params || {}) as {
-    appointmentUuid?: string; vetName?: string; scheduledAt?: string; appointmentType?: string; amount?: number; consultationId?: string
+  const { appointmentUuid, vetName, scheduledAt, appointmentType, amount, consultationId, status } = (route.params || {}) as {
+    appointmentUuid?: string; vetName?: string; scheduledAt?: string; appointmentType?: string; amount?: number; consultationId?: string; status?: string
   }
 
   const rawRef = (appointmentUuid || consultationId || '').slice(0, 8).toUpperCase()
@@ -38,6 +38,7 @@ export default function ConfirmationScreen() {
       <View style={styles.card}>
         <View style={styles.receiptHeader}><View><Text style={styles.receiptLabel}>APPOINTMENT SUMMARY</Text><Text style={styles.receiptRef}>Reference {bookingRef}</Text></View><Ionicons name="receipt-outline" size={24} color={colors.primary} /></View>
         <Row label="Booking reference" value={bookingRef} />
+        <Row label="Status" value={(status || 'pending').replace('_', ' ')} />
         <Row label="Veterinarian" value={vetName || 'Veterinarian'} />
         <Row label="Date & time" value={formattedDate} />
         <View style={styles.row}>
