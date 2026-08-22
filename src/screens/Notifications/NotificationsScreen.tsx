@@ -1,12 +1,58 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
+import PageHeader from '../../components/PageHeader'
+import { useNavigation } from '@react-navigation/native'
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../services'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
+
+// `n.type` on a Laravel DatabaseNotification is the fully-qualified class name
+// (e.g. "App\Notifications\AppointmentStatusNotification"), not something
+// human-readable — the readable label lives at `data.type` (a semantic slug)
+// and, for older rows saved before notifications carried a `data.title`, has
+// to be derived here instead of falling back to the raw class name.
+const TITLE_BY_TYPE: Record<string, string> = {
+  appointment_booked: 'New Appointment Request',
+  appointment_status_changed: 'Appointment Update',
+  sos_status_update: 'SOS Update',
+  sos_alert: 'SOS Emergency Request',
+  vet_approved: 'Profile Approved',
+  waitlist_slot_available: 'Appointment Slot Available',
+  overdue_medication: 'Overdue Medication Alert',
+  document_expiry: 'Pet Document Expiring Soon',
+  pet_reminder: 'Pet Reminder',
+}
+
+const STATUS_TITLE_SUFFIX: Record<string, string> = {
+  accepted: 'Appointment Accepted',
+  rejected: 'Appointment Rejected',
+  confirmed: 'Appointment Confirmed',
+  in_progress: 'Vet Visit Started',
+  completed: 'Appointment Completed',
+  cancelled: 'Appointment Cancelled',
+  cancelled_by_user: 'Appointment Cancelled',
+  cancelled_by_vet: 'Appointment Cancelled by Vet',
+  no_show: 'Appointment No-Show',
+}
+
+function titleFor(n: any): string {
+  if (n.title) return n.title
+  if (n.data?.title) return n.data.title
+  const type = n.data?.type as string | undefined
+  if (type === 'appointment_status_changed' && n.data?.new_status) {
+    const specific = STATUS_TITLE_SUFFIX[n.data.new_status as string]
+    if (specific) return specific
+  }
+  if (type && TITLE_BY_TYPE[type]) return TITLE_BY_TYPE[type]
+  return 'Notification'
+}
 
 export default function NotificationsScreen() {
+  const nav = useNavigation<any>()
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,8 +65,8 @@ export default function NotificationsScreen() {
       const res = await getNotifications('per_page=30')
       const list = pickArray(res?.data, ['notifications', 'items'])
       setNotifications(list)
-    } catch {
-      setError('Unable to load. Check your connection and try again.')
+    } catch (e) {
+      setError(parseApiError(e))
     } finally {
       setLoading(false)
     }
@@ -32,8 +78,8 @@ export default function NotificationsScreen() {
     try {
       await markNotificationRead(id)
       setNotifications(prev => prev.map(n => (String(n.id || n.uuid) === id ? { ...n, read_at: new Date().toISOString() } : n)))
-    } catch {
-      Alert.alert('Error', 'Could not mark notification as read.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     }
   }
 
@@ -42,28 +88,54 @@ export default function NotificationsScreen() {
     try {
       await markAllNotificationsRead()
       setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })))
-    } catch {
-      Alert.alert('Error', 'Could not mark all as read.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     } finally {
       setMarkingAll(false)
     }
   }
 
+  // Best-effort in-app deep link: route to the relevant screen when a
+  // notification carries a target, mirroring the push-tap handler.
+  function handleOpen(n: any, id: string) {
+    if (!n.read_at) handleMarkRead(id)
+    const data = n.data ?? n
+    const screen: string | undefined = data?.screen
+    const params = (data?.params ?? {}) as Record<string, unknown>
+    const apptId = data?.appointment_uuid ?? params?.appointmentId
+    const type = String(n.type ?? data?.type ?? '')
+
+    if (screen === 'AppointmentDetail' || apptId) {
+      nav.navigate('AppointmentDetail', { appointmentId: apptId, ...params })
+    } else if (screen === 'PaymentHistory' || type.includes('payment') || type.includes('refund')) {
+      nav.navigate('PaymentHistory')
+    } else if (screen === 'ConsultationRoom' && (data?.consultationId || params?.consultationId)) {
+      nav.navigate('ConsultationRoom', { consultationId: data?.consultationId ?? params?.consultationId, ...params })
+    }
+    // Otherwise stay on the list — nothing actionable to navigate to.
+  }
+
   const unreadCount = notifications.filter(n => !n.read_at).length
+
+  function iconFor(n: any): React.ComponentProps<typeof Ionicons>['name'] {
+    const type = String(n.type ?? n.data?.type ?? '').toLowerCase()
+    if (type.includes('payment') || type.includes('refund')) return 'card-outline'
+    if (type.includes('appointment') || type.includes('booking')) return 'calendar-outline'
+    if (type.includes('consult')) return 'videocam-outline'
+    if (type.includes('prescription')) return 'medical-outline'
+    return 'notifications-outline'
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Notifications</Text>
-          {unreadCount > 0 ? <Text style={styles.subtitle}>{unreadCount} unread</Text> : null}
-        </View>
-        {unreadCount > 0 ? (
-          <Pressable style={styles.markAllBtn} onPress={handleMarkAll} disabled={markingAll}>
-            {markingAll ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={styles.markAllText}>Mark all read</Text>}
-          </Pressable>
-        ) : null}
-      </View>
+      <PageHeader
+        title="Notifications"
+        subtitle={unreadCount > 0 ? `${unreadCount} update${unreadCount === 1 ? '' : 's'} waiting for you` : 'Everything important, in one place'}
+        rightIcon={unreadCount > 0 ? 'checkmark-done' : undefined}
+        rightLabel="Mark all notifications as read"
+        onRightPress={unreadCount > 0 ? handleMarkAll : undefined}
+      />
+      {markingAll ? <View style={styles.syncRow}><ActivityIndicator size="small" color={colors.primary} /><Text style={styles.syncText}>Updating notifications…</Text></View> : null}
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} /> : null}
 
@@ -80,7 +152,7 @@ export default function NotificationsScreen() {
       {!error && notifications.map(n => {
         const id = String(n.id || n.uuid || '')
         const isRead = Boolean(n.read_at)
-        const title = n.title || n.data?.title || n.type?.replace(/_/g, ' ') || 'Notification'
+        const title = titleFor(n)
         const body = n.body || n.data?.body || n.message || ''
         const createdAt = n.created_at ? new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
 
@@ -88,10 +160,13 @@ export default function NotificationsScreen() {
           <Pressable
             key={id}
             style={[styles.notifCard, isRead && styles.notifCardRead]}
-            onPress={() => { if (!isRead) handleMarkRead(id) }}
+            onPress={() => handleOpen(n, id)}
           >
-            {!isRead ? <View style={styles.unreadDot} /> : null}
+            <View style={[styles.notifIcon, !isRead && styles.notifIconUnread]}>
+              <Ionicons name={iconFor(n)} size={20} color={!isRead ? colors.primary : colors.muted} />
+            </View>
             <View style={styles.notifBody}>
+              {!isRead ? <Text style={styles.newLabel}>NEW</Text> : null}
               <Text style={[styles.notifTitle, isRead && styles.notifTitleRead]}>{title}</Text>
               {body ? <Text style={styles.notifMessage}>{body}</Text> : null}
               {createdAt ? <Text style={styles.notifTime}>{createdAt}</Text> : null}
@@ -105,28 +180,28 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.lg },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { color: colors.primary, fontWeight: '700', marginTop: 4 },
-  markAllBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.primarySoft, borderWidth: 1, borderColor: colors.primary },
-  markAllText: { color: colors.primary, fontWeight: '700', fontSize: 12 },
+  content: { padding: spacing.xl, paddingBottom: 48 },
+  syncRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, marginBottom: spacing.md, borderRadius: radius.md, backgroundColor: colors.primarySoft },
+  syncText: { ...typography.caption, color: colors.primary },
   notifCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary,
-    padding: spacing.md,
+    borderColor: colors.border,
+    padding: spacing.lg,
     marginBottom: spacing.sm,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    alignItems: 'center',
+    gap: spacing.md,
+    ...shadows.card,
   },
-  notifCardRead: { borderColor: colors.border, backgroundColor: colors.surfaceSoft },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginTop: 6 },
+  notifCardRead: { backgroundColor: colors.surface, shadowOpacity: 0.02 },
+  notifIcon: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceSoft },
+  notifIconUnread: { backgroundColor: colors.primarySoft },
   notifBody: { flex: 1 },
-  notifTitle: { fontWeight: '800', color: colors.text },
-  notifTitleRead: { fontWeight: '600', color: colors.muted },
-  notifMessage: { color: colors.muted, marginTop: 4, lineHeight: 18 },
-  notifTime: { color: colors.muted, fontSize: 11, marginTop: 6 },
+  newLabel: { color: colors.primary, fontSize: 9, fontWeight: '900', letterSpacing: 1, marginBottom: 3 },
+  notifTitle: { ...typography.bodyStrong, color: colors.text },
+  notifTitleRead: { color: colors.text },
+  notifMessage: { ...typography.caption, color: colors.muted, marginTop: 3 },
+  notifTime: { color: colors.subtle, fontSize: 11, marginTop: 7, fontWeight: '600' },
 })

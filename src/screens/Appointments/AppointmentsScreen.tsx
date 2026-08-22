@@ -5,8 +5,9 @@ import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
 import { cancelAppointment, getAppointments, createReview } from '../../services'
 import { useNavigation } from '@react-navigation/native'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { normalizeAppointment, pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
 
 export default function AppointmentsScreen() {
   const nav = useNavigation<any>()
@@ -32,8 +33,8 @@ export default function AppointmentsScreen() {
     setError('')
     try {
       const [upcomingRes, pastRes] = await Promise.allSettled([
-        getAppointments('status=pending,confirmed&per_page=20'),
-        getAppointments('status=completed,cancelled&per_page=20'),
+        getAppointments('status=pending,accepted,confirmed,in_progress&per_page=20'),
+        getAppointments('status=completed,cancelled,rejected&per_page=20'),
       ])
 
       if (upcomingRes.status === 'fulfilled') {
@@ -44,8 +45,8 @@ export default function AppointmentsScreen() {
         const list = pickArray(pastRes.value?.data, ['appointments', 'items']).map((appt, i) => normalizeAppointment(appt, i))
         setPast(list)
       }
-    } catch {
-      setError('Unable to load. Check your connection and try again.')
+    } catch (e) {
+      setError(parseApiError(e))
     } finally {
       setLoading(false)
     }
@@ -72,8 +73,8 @@ export default function AppointmentsScreen() {
       setCancelTarget(null)
       setCancelReason('')
       refetch()
-    } catch {
-      Alert.alert('Error', 'Could not cancel appointment. Please try again.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     } finally {
       setCancelling(false)
     }
@@ -99,8 +100,8 @@ export default function AppointmentsScreen() {
       setReviewTarget(null)
       setReviewComment('')
       setRating(5)
-    } catch {
-      Alert.alert('Error', 'Could not submit review. Please try again.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     } finally {
       setSubmittingReview(false)
     }
@@ -155,7 +156,7 @@ export default function AppointmentsScreen() {
             <AppointmentCard appt={a} />
           </Pressable>
           <View style={styles.actionRow}>
-            {(a.status === 'pending' || a.status === 'confirmed') ? (
+            {(a.status === 'pending' || a.status === 'accepted' || a.status === 'confirmed') ? (
               <Pressable style={styles.cancelBtn} onPress={() => { setCancelTarget(a); setCancelReason('') }}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </Pressable>
@@ -234,18 +235,18 @@ export default function AppointmentsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { color: colors.muted, marginTop: 6, marginBottom: spacing.lg },
-  segmentWrap: { flexDirection: 'row', gap: 8, marginBottom: spacing.lg },
-  segment: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  segmentActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 48 },
+  title: { ...typography.h1, color: colors.text },
+  subtitle: { ...typography.body, color: colors.muted, marginTop: 4, marginBottom: spacing.xl },
+  segmentWrap: { flexDirection: 'row', gap: 4, marginBottom: spacing.xl, padding: 4, borderRadius: radius.md, backgroundColor: colors.surfaceSoft },
+  segment: { flex: 1, paddingVertical: 11, alignItems: 'center', borderRadius: radius.sm },
+  segmentActive: { backgroundColor: colors.surface, ...shadows.card },
   segmentText: { color: colors.muted, fontWeight: '800', fontSize: 12, letterSpacing: 0.6 },
-  segmentTextActive: { color: colors.onPrimary },
-  heroCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg },
-  heroEyebrow: { color: colors.primary, fontWeight: '800', fontSize: 11, letterSpacing: 1.1 },
-  heroValue: { color: colors.text, fontSize: 22, fontWeight: '900', marginTop: 6 },
-  heroMeta: { color: colors.muted, marginTop: 4 },
+  segmentTextActive: { color: colors.primary },
+  heroCard: { backgroundColor: colors.primary, borderRadius: radius.xl, padding: spacing.xl, marginBottom: spacing.xl, ...shadows.floating },
+  heroEyebrow: { color: 'rgba(255,247,240,0.72)', fontWeight: '800', fontSize: 10, letterSpacing: 1.1 },
+  heroValue: { color: colors.onPrimary, fontSize: 23, fontWeight: '900', marginTop: 8 },
+  heroMeta: { color: 'rgba(255,247,240,0.80)', marginTop: 4 },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: -8, marginBottom: spacing.sm },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: colors.danger },
   cancelBtnText: { color: colors.danger, fontWeight: '700', fontSize: 13 },

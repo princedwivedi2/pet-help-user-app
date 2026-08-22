@@ -1,10 +1,14 @@
 import React, { useState } from 'react'
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, StyleSheet, Modal } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { useNavigation } from '@react-navigation/native'
 import { useAuth } from '../../contexts/AuthProvider'
 import { updateProfile, changePassword, deleteAccount } from '../../services'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
+import { parseApiError, getValidationErrors } from '../../utils/apiError'
 
 export default function ProfileScreen() {
+  const nav = useNavigation<any>()
   const { signOut, user, refreshUser } = useAuth()
   const [editVisible, setEditVisible] = useState(false)
   const [pwVisible, setPwVisible] = useState(false)
@@ -38,8 +42,10 @@ export default function ProfileScreen() {
       await refreshUser()
       setEditVisible(false)
       Alert.alert('Profile updated', 'Your profile has been saved.')
-    } catch {
-      Alert.alert('Error', 'Could not update profile. Please try again.')
+    } catch (e) {
+      const fieldErrs = getValidationErrors(e)
+      if (Object.keys(fieldErrs).length) setEditErrors(fieldErrs)
+      else Alert.alert('Error', parseApiError(e))
     } finally {
       setSaving(false)
     }
@@ -67,8 +73,8 @@ export default function ProfileScreen() {
       setConfirmPw('')
       setPwVisible(false)
       Alert.alert('Password changed', 'Your password has been updated.')
-    } catch {
-      Alert.alert('Error', 'Could not change password. Please try again.')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
     } finally {
       setSaving(false)
     }
@@ -127,11 +133,19 @@ export default function ProfileScreen() {
       }} />
       <ActionRow label="Change password" note="Update your login password" onPress={() => { setPwErrors({}); setPwVisible(true) }} />
 
+      <Text style={styles.sectionLabel}>PAYMENTS</Text>
+      <ActionRow label="Wallet & payments" note="Balance and transaction history" onPress={() => nav.navigate('Wallet')} />
+      <ActionRow label="Payment history" note="View past payments and refund status" onPress={() => nav.navigate('PaymentHistory')} />
+
       <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
-      <ActionRow label="Notification alerts" note="Managed via device settings" onPress={() => Alert.alert('Notifications', 'Manage notification permissions in your device Settings app.')} />
+      <ActionRow label="Notification preferences" note="Appointments, care, payments, and offers" onPress={() => nav.navigate('NotificationPreferences')} />
 
       <Text style={styles.sectionLabel}>SUPPORT</Text>
-      <ActionRow label="Help & support" note="24/7 help center" onPress={() => Alert.alert('Support', 'Contact us at support@respaw.app')} />
+      <ActionRow label="AI pet assistant" note="Ask general pet-care questions" onPress={() => nav.navigate('Chat')} />
+      <ActionRow label="Pet care articles" note="Trusted guides for everyday care" onPress={() => nav.navigate('Blog')} />
+      <ActionRow label="Help & support" note="Answers and contact options" onPress={() => nav.navigate('HelpSupport')} />
+      <ActionRow label="Legal & about" note="Privacy, terms, refunds, and medical notice" onPress={() => nav.navigate('LegalAbout')} />
+      <ActionRow label="Server settings" note="Change the backend URL" onPress={() => nav.navigate('ServerSettings')} />
 
       <Text style={styles.sectionLabel}>DANGER ZONE</Text>
       <Pressable style={styles.signOutButton} onPress={handleSignOut}>
@@ -226,8 +240,22 @@ export default function ProfileScreen() {
 }
 
 function ActionRow({ label, note, onPress }: { label: string; note: string; onPress: () => void }) {
+  type IconName = React.ComponentProps<typeof Ionicons>['name']
+  const icons: Record<string, IconName> = {
+    'Edit profile': 'person-outline',
+    'Change password': 'lock-closed-outline',
+    'Wallet & payments': 'wallet-outline',
+    'Payment history': 'receipt-outline',
+    'Notification preferences': 'notifications-outline',
+    'AI pet assistant': 'sparkles-outline',
+    'Pet care articles': 'book-outline',
+    'Help & support': 'help-buoy-outline',
+    'Legal & about': 'document-text-outline',
+    'Server settings': 'server-outline',
+  }
   return (
     <Pressable style={styles.rowCard} onPress={onPress}>
+      <View style={styles.rowIcon}><Ionicons name={icons[label] || 'ellipse-outline'} size={19} color={colors.primary} /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowLabel}>{label}</Text>
         <Text style={styles.rowNote}>{note}</Text>
@@ -239,7 +267,7 @@ function ActionRow({ label, note, onPress }: { label: string; note: string; onPr
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 52 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 52 },
   headerCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -248,6 +276,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.lg,
     alignItems: 'center',
+    ...shadows.card,
   },
   avatarCircle: {
     width: 72,
@@ -259,7 +288,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   avatarText: { color: colors.onPrimary, fontSize: 30, fontWeight: '800' },
-  name: { fontSize: 22, fontWeight: '900', color: colors.text },
+  name: { ...typography.h2, color: colors.text },
   email: { color: colors.muted, marginTop: 4 },
   roleBadge: {
     marginTop: 8,
@@ -279,7 +308,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
     letterSpacing: 1.2,
     marginTop: spacing.lg,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
     textTransform: 'uppercase',
   },
   rowCard: {
@@ -291,10 +320,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
+    ...shadows.card,
   },
+  rowIcon: { width: 38, height: 38, borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
   rowLabel: { color: colors.text, fontWeight: '800' },
   rowNote: { color: colors.muted, marginTop: 2, fontSize: 12 },
-  rowArrow: { color: colors.muted, fontSize: 22, fontWeight: '300' },
+  rowArrow: { display: 'none' },
   signOutButton: {
     marginTop: spacing.sm,
     backgroundColor: colors.primary,

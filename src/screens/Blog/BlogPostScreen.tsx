@@ -3,18 +3,17 @@ import {
   View,
   Text,
   ScrollView,
-  Pressable,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native'
-import { useNavigation, useRoute } from '@react-navigation/native'
+import { useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import ErrorCard from '../../components/ErrorCard'
+import PageHeader from '../../components/PageHeader'
 import { getBlogPost, likeBlogPost } from '../../services/blog'
 
 export default function BlogPostScreen() {
-  const nav = useNavigation<any>()
   const route = useRoute<any>()
   const { postUuid, post: routePost } = (route.params ?? {}) as any
 
@@ -55,29 +54,7 @@ export default function BlogPostScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* Header row */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => nav.goBack()}
-          accessible
-          accessibilityLabel="Go back"
-          hitSlop={8}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </Pressable>
-        <Pressable
-          onPress={handleLike}
-          accessible
-          accessibilityLabel="Like post"
-          hitSlop={8}
-        >
-          <Ionicons
-            name={liked ? 'heart' : 'heart-outline'}
-            size={24}
-            color={colors.danger}
-          />
-        </Pressable>
-      </View>
+      <View style={styles.header}><PageHeader title="Care journal" subtitle="Practical guidance from the Respaw community" rightIcon={liked ? 'heart' : 'heart-outline'} rightLabel={liked ? 'Unlike article' : 'Like article'} onRightPress={handleLike} /></View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Optimistic title always shown */}
@@ -137,42 +114,35 @@ export default function BlogPostScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
   },
   content: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingBottom: 48,
+    maxWidth: 720,
   },
   categoryLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: colors.primary,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '900',
+    letterSpacing: 1,
     marginBottom: spacing.sm,
   },
   postTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...typography.h1,
     color: colors.text,
-    lineHeight: 34,
     marginBottom: spacing.sm,
   },
   meta: {
-    fontSize: 12,
+    ...typography.caption,
     color: colors.muted,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xl,
   },
   body: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 27,
     marginBottom: spacing.md,
   },
   spinner: { marginTop: spacing.xl },
@@ -180,7 +150,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: spacing.md,
+    marginTop: spacing.xl,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card,
   },
   likeCount: { fontSize: 14, color: colors.muted },
 })

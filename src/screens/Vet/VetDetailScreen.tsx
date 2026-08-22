@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'
+import { Ionicons } from '@expo/vector-icons'
 import PrimaryButton from '../../components/PrimaryButton'
 import ErrorCard from '../../components/ErrorCard'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { getVet, getReviewsForVet } from '../../services'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { normalizeVet, pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
+import { openDirections, DEFAULT_DELTA, HAS_MAPS_KEY } from '../../utils/geo'
 
 export default function VetDetailScreen() {
   const navigation = useNavigation<any>()
@@ -25,8 +29,8 @@ export default function VetDetailScreen() {
       const res = await getVet(route.params.vetId)
       const data = res?.data as any
       setVet(normalizeVet(data?.vet || data || {}, 0))
-    } catch {
-      setLoadError('Unable to load this vet profile right now.')
+    } catch (e) {
+      setLoadError(parseApiError(e))
     } finally {
       setLoading(false)
     }
@@ -114,6 +118,8 @@ export default function VetDetailScreen() {
         </View>
       ) : null}
 
+      <ClinicLocation vet={vet} />
+
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Fee summary</Text>
         {feeNum > 0 ? (
@@ -153,6 +159,66 @@ export default function VetDetailScreen() {
         <PrimaryButton title="Consult Online" onPress={() => navigation.navigate('Booking', { vetId: vet.uuid || vet.id, vet, preselectedType: 'online' })} />
       </View>
     </ScrollView>
+  )
+}
+
+function ClinicLocation({ vet }: { vet: any }) {
+  const hasCoords = vet.latitude != null && vet.longitude != null
+  const address = vet.address || vet.clinic || ''
+  // Nothing useful to show if we have neither coordinates nor an address.
+  if (!hasCoords && !address) return null
+
+  const canDirect = hasCoords || !!address
+
+  async function onDirections() {
+    await openDirections({
+      latitude: vet.latitude,
+      longitude: vet.longitude,
+      label: vet.clinic || vet.name,
+      address,
+    })
+  }
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>Clinic location</Text>
+
+      {hasCoords && HAS_MAPS_KEY ? (
+        <View style={styles.miniMapWrap}>
+          <MapView
+            style={styles.miniMap}
+            provider={PROVIDER_GOOGLE}
+            pointerEvents="none"
+            initialRegion={{
+              latitude: vet.latitude,
+              longitude: vet.longitude,
+              ...DEFAULT_DELTA,
+            }}
+          >
+            <Marker
+              coordinate={{ latitude: vet.latitude, longitude: vet.longitude }}
+              pinColor={colors.primary}
+            />
+          </MapView>
+        </View>
+      ) : (
+        <View style={styles.noMap}>
+          <Ionicons name="map-outline" size={22} color={colors.muted} />
+          <Text style={styles.noMapText}>Map preview unavailable for this clinic.</Text>
+        </View>
+      )}
+
+      {address ? <Text style={[styles.body, { marginTop: spacing.sm }]}>{address}</Text> : null}
+
+      <Pressable
+        onPress={onDirections}
+        disabled={!canDirect}
+        style={[styles.directionsBtn, !canDirect && styles.directionsBtnDisabled]}
+      >
+        <Ionicons name="navigate" size={16} color={colors.onPrimary} />
+        <Text style={styles.directionsText}>Get directions</Text>
+      </Pressable>
+    </View>
   )
 }
 
@@ -199,9 +265,9 @@ function ReviewRow({ review }: { review: any }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   centered: { alignItems: 'center', justifyContent: 'center' },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  heroCard: { backgroundColor: colors.primary, borderRadius: 28, padding: spacing.lg, marginBottom: spacing.lg },
-  name: { color: colors.onPrimary, fontSize: 28, fontWeight: '800' },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 48 },
+  heroCard: { backgroundColor: colors.primary, borderRadius: radius.xl, padding: spacing.xl, marginBottom: spacing.xl, ...shadows.floating },
+  name: { ...typography.h1, color: colors.onPrimary },
   clinic: { color: colors.onPrimary, fontSize: 16, marginTop: 4, opacity: 0.95 },
   meta: { color: 'rgba(255,247,241,0.9)', marginTop: 6 },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: spacing.lg },
@@ -211,8 +277,8 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.lg },
   chip: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10 },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
-  card: { backgroundColor: colors.surface, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md, ...shadows.card },
+  sectionTitle: { ...typography.h2, color: colors.text, marginBottom: spacing.sm },
   body: { color: colors.muted, lineHeight: 20 },
   lineItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   lineLabel: { color: colors.text },
@@ -226,6 +292,22 @@ const styles = StyleSheet.create({
   reviewComment: { color: colors.muted, marginTop: 4, lineHeight: 18 },
   reviewDate: { color: colors.muted, fontSize: 11, marginTop: 4 },
   moreReviews: { color: colors.primary, fontWeight: '700', marginTop: spacing.sm, textAlign: 'center' },
+  miniMapWrap: { borderRadius: radius.md, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+  miniMap: { height: 150, width: '100%' },
+  noMap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  noMapText: { color: colors.muted, flex: 1 },
+  directionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    marginTop: spacing.md,
+  },
+  directionsBtnDisabled: { backgroundColor: colors.border },
+  directionsText: { color: colors.onPrimary, fontWeight: '800' },
   comingSoonCard: { borderStyle: 'dashed', backgroundColor: colors.surfaceSoft },
   comingSoonLabel: { color: colors.muted, fontWeight: '700', textAlign: 'center' },
   buttonWrap: { marginTop: spacing.sm },

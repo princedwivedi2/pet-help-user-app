@@ -1,15 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, TextInput } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import ErrorCard from '../../components/ErrorCard'
+import PageHeader from '../../components/PageHeader'
 import { getAppointment, cancelAppointment } from '../../services/appointments'
+import { createReview, getReviewsForVet } from '../../services'
+import { pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   pending: { bg: colors.sky, text: colors.warning },
+  accepted: { bg: colors.primarySoft, text: colors.primary },
   confirmed: { bg: colors.primarySoft, text: colors.primary },
+  in_progress: { bg: colors.primarySoft, text: colors.primary },
   completed: { bg: colors.mint, text: colors.accent },
+  rejected: { bg: colors.dangerSoft, text: colors.danger },
   cancelled: { bg: colors.dangerSoft, text: colors.danger },
 }
 
@@ -40,6 +47,10 @@ export default function AppointmentDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [data, setData] = useState<any>(routeAppt ?? null)
+  const [existingReview, setExistingReview] = useState<any>(null)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
 
   const refetch = useCallback(async () => {
     setLoading(true)
@@ -47,14 +58,45 @@ export default function AppointmentDetailScreen() {
     try {
       const res = await getAppointment(appointmentId)
       setData(res?.data ?? res)
-    } catch {
-      setError('Unable to load. Check your connection and try again.')
+    } catch (e) {
+      setError(parseApiError(e))
     } finally {
       setLoading(false)
     }
   }, [appointmentId])
 
   useEffect(() => { refetch() }, [refetch])
+
+  useEffect(() => {
+    async function loadReview() {
+      const vetUuid = data?.appointment?.vet?.uuid ?? data?.vet?.uuid ?? data?.vet_uuid
+      if (!vetUuid) return
+      try {
+        const res = await getReviewsForVet(vetUuid)
+        const list = pickArray(res?.data, ['reviews', 'items'])
+        const mine = list.find((r: any) => r.appointment_uuid === appointmentId || r.appointment?.uuid === appointmentId)
+        if (mine) setExistingReview(mine)
+      } catch { /* non-fatal */ }
+    }
+    if (data) loadReview()
+  }, [data, appointmentId])
+
+  async function handleSubmitReview() {
+    if (reviewRating === 0) {
+      Alert.alert('Rating required', 'Please select a star rating.')
+      return
+    }
+    setSubmittingReview(true)
+    try {
+      await createReview({ appointment_uuid: appointmentId ?? '', rating: reviewRating, comment: reviewComment || '' })
+      setExistingReview({ rating: reviewRating, comment: reviewComment })
+      Alert.alert('Review submitted', 'Thanks for your feedback!')
+    } catch (e) {
+      Alert.alert('Error', parseApiError(e))
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
 
   const appt = data?.appointment ?? data ?? {}
   const raw = appt.raw ?? appt
@@ -72,6 +114,7 @@ export default function AppointmentDetailScreen() {
   const isHomeVisit = type === 'home_visit' || type === 'home visit'
   const fee = raw.consultation_fee ?? raw.fee ?? ''
   const paymentStatus = raw.payment_status ?? raw.payment?.status ?? ''
+  const rejectionReason = raw.rejection_reason ?? appt.rejection_reason ?? ''
 
   function handleCancel() {
     Alert.alert(
@@ -95,13 +138,7 @@ export default function AppointmentDetailScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <Pressable onPress={() => nav.goBack()} accessibilityLabel="Go back" style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={styles.pageTitle}>Appointment Details</Text>
-      </View>
+      <PageHeader title="Appointment details" subtitle="Timing, care type, payment, and next actions" />
 
       {loading && !data ? <ActivityIndicator color={colors.primary} style={styles.spinner} /> : null}
       {!loading && error ? <ErrorCard message={error} onRetry={refetch} /> : null}
@@ -109,11 +146,9 @@ export default function AppointmentDetailScreen() {
       {data ? (
         <>
           {/* Status card */}
-          <View style={styles.card}>
-            <Text style={styles.vetName}>{vetName}</Text>
-            <Text style={styles.dateText}>{formattedDate}</Text>
+          <View style={[styles.card, styles.heroCard]}>
+            <View style={styles.heroTop}><View style={styles.heroIcon}><Ionicons name={type === 'online' ? 'videocam' : isHomeVisit ? 'home' : 'calendar'} size={22} color={colors.primary} /></View><View style={styles.heroCopy}><Text style={styles.vetName}>{vetName}</Text><Text style={styles.dateText}>{formattedDate}</Text></View><StatusBadge status={status} /></View>
             <View style={styles.badgeRow}>
-              <StatusBadge status={status} />
               {type ? (
                 <View style={[styles.badge, styles.typeBadge]}>
                   <Text style={[styles.badgeText, { color: colors.muted }]}>{type.replace('_', ' ').toUpperCase()}</Text>
@@ -137,11 +172,77 @@ export default function AppointmentDetailScreen() {
             <DetailRow label="Payment status" value={paymentStatus || 'Pending'} />
           </View>
 
+          {/* Rejection notice */}
+          {status === 'rejected' ? (
+            <View style={[styles.card, styles.heroCard, { backgroundColor: colors.dangerSoft }]}>
+              <Text style={styles.cardTitle}>Declined by vet</Text>
+              <Text style={styles.detailValue}>
+                {rejectionReason || 'The vet was unable to accept this appointment. Please book another time slot or a different vet.'}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Review card — only for completed appointments */}
+          {status === 'completed' ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Your Review</Text>
+              {existingReview ? (
+                <View>
+                  <View style={styles.starRow}>
+                    {[1,2,3,4,5].map(s => (
+                      <Text key={s} style={{ fontSize: 20, color: s <= existingReview.rating ? colors.warning : colors.border }}>★</Text>
+                    ))}
+                  </View>
+                  {existingReview.comment ? <Text style={styles.reviewCommentText}>{existingReview.comment}</Text> : null}
+                  <Text style={styles.reviewSubmittedLabel}>Review submitted ✓</Text>
+                </View>
+              ) : (
+                <View>
+                  <Text style={styles.detailLabel}>Tap to rate your experience</Text>
+                  <View style={styles.starRow}>
+                    {[1,2,3,4,5].map(s => (
+                      <Pressable key={s} onPress={() => setReviewRating(s)} hitSlop={8}>
+                        <Text style={{ fontSize: 28, color: s <= reviewRating ? colors.warning : colors.border }}>★</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <TextInput
+                    style={styles.reviewInput}
+                    placeholder="Share your experience (optional)"
+                    placeholderTextColor={colors.muted}
+                    value={reviewComment}
+                    onChangeText={setReviewComment}
+                    multiline
+                    maxLength={500}
+                  />
+                  <Pressable
+                    style={[styles.actionBtn, styles.rescheduleBtn, submittingReview && { opacity: 0.6 }]}
+                    onPress={handleSubmitReview}
+                    disabled={submittingReview}
+                  >
+                    {submittingReview
+                      ? <ActivityIndicator size="small" color={colors.primary} />
+                      : <Text style={styles.rescheduleBtnText}>Submit Review</Text>
+                    }
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          ) : null}
+
           {/* Actions card */}
-          {(status === 'pending' || status === 'confirmed') ? (
+          {(status === 'pending' || status === 'accepted' || status === 'confirmed') ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Actions</Text>
-              <Pressable style={[styles.actionBtn, styles.rescheduleBtn]}>
+              <Pressable
+                style={[styles.actionBtn, styles.rescheduleBtn]}
+                onPress={() =>
+                  Alert.alert(
+                    'Reschedule',
+                    'To reschedule, please cancel this appointment and book a new time slot.',
+                  )
+                }
+              >
                 <Text style={styles.rescheduleBtnText}>Reschedule appointment</Text>
               </Pressable>
               <Pressable style={[styles.actionBtn, styles.cancelBtn]} onPress={handleCancel}>
@@ -157,10 +258,7 @@ export default function AppointmentDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg, gap: spacing.sm },
-  backBtn: { padding: 4 },
-  pageTitle: { fontSize: 28, fontWeight: '700', color: colors.text, flex: 1 },
+  content: { padding: spacing.xl, paddingBottom: 48 },
   spinner: { marginTop: spacing.xl },
   card: {
     borderRadius: radius.xl,
@@ -169,9 +267,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing.lg,
     marginBottom: spacing.md,
+    ...shadows.card,
   },
-  vetName: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  dateText: { fontSize: 14, color: colors.muted, marginBottom: spacing.sm },
+  heroCard: { backgroundColor: colors.primarySoft, borderColor: colors.borderStrong, padding: spacing.lg },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  heroIcon: { width: 48, height: 48, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  heroCopy: { flex: 1 },
+  vetName: { ...typography.h3, color: colors.text },
+  dateText: { ...typography.caption, color: colors.muted, marginTop: 3 },
   badgeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 },
   badge: {
     borderRadius: radius.sm,
@@ -181,7 +284,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
   typeBadge: { backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: colors.muted, marginBottom: spacing.sm, letterSpacing: 0.5 },
+  cardTitle: { fontSize: 10, fontWeight: '900', color: colors.muted, marginBottom: spacing.sm, letterSpacing: 1, textTransform: 'uppercase' },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
   detailLabel: { fontSize: 14, color: colors.muted },
   detailValue: { fontSize: 14, color: colors.text, fontWeight: '600', flexShrink: 1, textAlign: 'right', maxWidth: '60%' },
@@ -197,4 +300,17 @@ const styles = StyleSheet.create({
   rescheduleBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
   cancelBtn: { borderColor: colors.danger },
   cancelBtnText: { color: colors.danger, fontWeight: '700', fontSize: 14 },
+  starRow: { flexDirection: 'row', gap: 6, marginVertical: spacing.sm },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    color: colors.text,
+    minHeight: 72,
+    textAlignVertical: 'top',
+    marginBottom: spacing.sm,
+  },
+  reviewCommentText: { color: colors.muted, lineHeight: 20, marginTop: spacing.xs },
+  reviewSubmittedLabel: { color: colors.accent, fontWeight: '700', marginTop: spacing.xs, fontSize: 13 },
 })

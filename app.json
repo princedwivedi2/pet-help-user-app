@@ -6,12 +6,78 @@
     "orientation": "portrait",
     "version": "1.0.0",
     "userInterfaceStyle": "light",
+    "icon": "./assets/respaw-logo.jpg",
     "extra": {
-      "apiUrl": "http://192.168.1.26:8002/api/v1"
+      "apiUrl": "https://api.respaw.in/api/v1",
+      "eas": {
+        "projectId": "85cc6d13-f58d-4cc3-989e-0c2203ee2f07"
+      }
     },
     "plugins": [
       "expo-asset",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/respaw-logo.jpg",
+          "imageWidth": 280,
+          "resizeMode": "contain",
+          "backgroundColor": "#51237b"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow RESPAW to access your photos so you can set a picture for your pet.",
+          "cameraPermission": "Allow RESPAW to use the camera so you can take a photo of your pet."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#51237b",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow RESPAW to use your location to find vet clinics near you."
+        }
+      ]
+    ],
+    "ios": {
+      "bundleIdentifier": "com.respaw.user",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow RESPAW to use the camera so you can take a photo of your pet.",
+        "NSPhotoLibraryUsageDescription": "Allow RESPAW to access your photos so you can set a picture for your pet.",
+        "NSMicrophoneUsageDescription": "Allow RESPAW to use your microphone for audio/video consultations.",
+        "NSLocationWhenInUseUsageDescription": "Allow RESPAW to use your location to find vet clinics near you.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow RESPAW to use your location to find vet clinics near you."
+      }
+    },
+    "android": {
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "package": "com.respaw.user"
+    },
+    "web": {
+      "favicon": "./assets/respaw-logo.jpg"
+    }
   }
 }

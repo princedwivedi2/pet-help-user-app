@@ -1,10 +1,41 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native'
+// Alert is kept for slot/pet validation dialogs
 import PrimaryButton from '../../components/PrimaryButton'
+import ErrorCard from '../../components/ErrorCard'
 import { createAppointment, getAppointmentSlots, getPets } from '../../services'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { colors, radius, spacing } from '../../theme'
-import { addDays, formatDateKey, isFutureISO, normalizePet, normalizeSlot, pickArray } from '../../utils/backendAdapters'
+import { addDays, formatDateKey, isFutureISO, normalizePet, pickArray } from '../../utils/backendAdapters'
+import { parseApiError, getValidationErrors } from '../../utils/apiError'
+
+// Backend returns slots as bare time-of-day strings (e.g. "09:00"). Combine them
+// with the selected date so we get a real, parseable datetime + readable label.
+function buildSlotOption(raw: any, dateKey: string): { value: string; label: string } | null {
+  if (raw == null) return null
+
+  let timePart = ''
+  let fullDateTime = ''
+
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    if (!trimmed) return null
+    if (trimmed.includes('T') || (trimmed.includes(' ') && trimmed.length > 8)) {
+      fullDateTime = trimmed
+    } else {
+      timePart = trimmed
+    }
+  } else {
+    fullDateTime = String(raw.scheduled_at || raw.start_at || raw.datetime || '').trim()
+    timePart = String(raw.start_time || raw.time || raw.slot || raw.value || '').trim()
+  }
+
+  const value = fullDateTime || `${dateKey}T${timePart.length === 5 ? `${timePart}:00` : timePart}`
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return null
+
+  return { value, label: date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }
+}
 
 export default function BookingScreen() {
   const navigation = useNavigation<any>()
@@ -15,20 +46,18 @@ export default function BookingScreen() {
 
   const [pets, setPets] = useState<any[]>([])
   const [selectedPet, setSelectedPet] = useState<string>('')
-  const [selectedType, setSelectedType] = useState<'clinic_visit' | 'home_visit' | 'online'>('clinic_visit')
+  const [selectedType, setSelectedType] = useState<'clinic_visit' | 'online'>('clinic_visit')
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()))
   const [slots, setSlots] = useState<{ value: string; label: string }[]>([])
   const [selectedSlot, setSelectedSlot] = useState('')
   const [reason, setReason] = useState('General consultation')
-  const [homeAddress, setHomeAddress] = useState('')
-  const [homeLatitude, setHomeLatitude] = useState('')
-  const [homeLongitude, setHomeLongitude] = useState('')
   const [loading, setLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState('')
+  const [submitError, setSubmitError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const amount = useMemo(() => (selectedType === 'home_visit' ? consultationFee + 200 : selectedType === 'online' ? Math.max(349, consultationFee - 150) : consultationFee), [consultationFee, selectedType])
+  const amount = useMemo(() => (selectedType === 'online' ? Math.max(349, consultationFee - 150) : consultationFee), [consultationFee, selectedType])
 
   useEffect(() => {
     async function loadPets() {
@@ -52,13 +81,16 @@ export default function BookingScreen() {
       try {
         const res = await getAppointmentSlots(vetId, selectedDate)
         const rawSlots = pickArray(res?.data, ['slots'])
-        const nextSlots = rawSlots.map(normalizeSlot).filter(Boolean) as { value: string; label: string }[]
-        setSlots(nextSlots.filter(slot => isFutureISO(slot.value)))
+        const nextSlots = rawSlots
+          .map(slot => buildSlotOption(slot, selectedDate))
+          .filter((slot): slot is { value: string; label: string } => Boolean(slot))
+          .filter(slot => isFutureISO(slot.value))
+        setSlots(nextSlots)
         setSelectedSlot(prev => prev && nextSlots.some(slot => slot.value === prev) ? prev : (nextSlots[0]?.value || ''))
-      } catch {
+      } catch (e) {
         setSlots([])
         setSelectedSlot('')
-        setError('Unable to load live slots right now. Try a different date or try again.')
+        setError(parseApiError(e))
       } finally {
         setPageLoading(false)
       }
@@ -69,7 +101,7 @@ export default function BookingScreen() {
 
   useEffect(() => {
     const pre = route.params?.preselectedType
-    if (pre === 'online' || pre === 'home_visit' || pre === 'clinic_visit') {
+    if (pre === 'online' || pre === 'clinic_visit') {
       setSelectedType(pre)
     }
   }, [route.params?.preselectedType])
@@ -78,14 +110,6 @@ export default function BookingScreen() {
     let msg = ''
     if (field === 'reason') {
       if (value.trim().length < 4) msg = 'Please describe the reason for your visit'
-    } else if (field === 'home_address') {
-      if (selectedType === 'home_visit' && !value.trim()) msg = 'Enter your home address'
-    } else if (field === 'coords') {
-      const lat = parseFloat(homeLatitude)
-      const lng = parseFloat(homeLongitude)
-      if (selectedType === 'home_visit' && (isNaN(lat) || isNaN(lng) || !homeLatitude.trim() || !homeLongitude.trim())) {
-        msg = 'Valid coordinates are required for home visits'
-      }
     }
     setErrors(prev => {
       if (!msg) {
@@ -100,19 +124,13 @@ export default function BookingScreen() {
   function validateAll(): boolean {
     const errs: Record<string, string> = {}
     if (reason.trim().length < 4) errs.reason = 'Please describe the reason for your visit'
-    if (selectedType === 'home_visit') {
-      if (!homeAddress.trim()) errs.home_address = 'Enter your home address'
-      const lat = parseFloat(homeLatitude)
-      const lng = parseFloat(homeLongitude)
-      if (!homeLatitude.trim() || !homeLongitude.trim() || isNaN(lat) || isNaN(lng)) {
-        errs.coords = 'Valid coordinates are required for home visits'
-      }
-    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
 
   async function handleProceed() {
+    if (loading) return
+
     if (!selectedPet) {
       Alert.alert('Select a pet', 'Choose which pet this appointment is for.')
       return
@@ -131,6 +149,7 @@ export default function BookingScreen() {
     if (!validateAll()) return
 
     setLoading(true)
+    setSubmitError('')
     try {
       const res = await createAppointment({
         vet_uuid: vetId,
@@ -139,11 +158,6 @@ export default function BookingScreen() {
         appointment_type: selectedType,
         reason,
         notes: `Booked from mobile app for ${vetName}`,
-        ...(selectedType === 'home_visit' ? {
-          home_address: homeAddress.trim(),
-          home_latitude: parseFloat(homeLatitude),
-          home_longitude: parseFloat(homeLongitude),
-        } : {}),
       })
       const appointment = (res?.data as any)?.appointment || res?.data || {}
       const appointmentUuid = appointment?.uuid || appointment?.id
@@ -157,10 +171,15 @@ export default function BookingScreen() {
           appointmentType: selectedType,
         })
       } else {
-        Alert.alert('Booking failed', res?.message || 'Unable to create appointment')
+        setSubmitError(res?.message || 'Unable to create appointment. Please try again.')
       }
     } catch (e) {
-      Alert.alert('Error', String(e))
+      // Surface 422 field errors into the form
+      const fieldErrs = getValidationErrors(e)
+      if (Object.keys(fieldErrs).length) {
+        setErrors(fieldErrs)
+      }
+      setSubmitError(parseApiError(e))
     } finally {
       setLoading(false)
     }
@@ -200,55 +219,15 @@ export default function BookingScreen() {
         <View style={styles.rowWrap}>
           {[
             { value: 'clinic_visit', label: 'Clinic' },
-            { value: 'home_visit', label: 'Home' },
             { value: 'online', label: 'Online' },
           ].map(item => (
             <Pressable key={item.value} onPress={() => setSelectedType(item.value as any)} style={[styles.typeCard, selectedType === item.value && styles.typeCardActive]}>
               <Text style={[styles.typeLabel, selectedType === item.value && styles.typeLabelActive]}>{item.label}</Text>
-              <Text style={[styles.typeMeta, selectedType === item.value && styles.typeMetaActive]}>{item.value === 'online' ? 'Video / audio' : item.value === 'home_visit' ? 'At your address' : 'At clinic'}</Text>
+              <Text style={[styles.typeMeta, selectedType === item.value && styles.typeMetaActive]}>{item.value === 'online' ? 'Video / audio' : 'At clinic'}</Text>
             </Pressable>
           ))}
         </View>
       </View>
-
-      {selectedType === 'home_visit' ? (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Home address</Text>
-          <TextInput
-            value={homeAddress}
-            onChangeText={v => { setHomeAddress(v); setErrors(p => { const n = { ...p }; delete n.home_address; return n }) }}
-            onBlur={() => validateField('home_address', homeAddress)}
-            multiline
-            placeholder="Enter the full visit address"
-            placeholderTextColor={colors.muted}
-            style={styles.textArea}
-          />
-          {errors.home_address ? <Text style={styles.fieldError}>{errors.home_address}</Text> : null}
-          <Text style={styles.sectionTitle2}>GPS Coordinates</Text>
-          <Text style={styles.helperText}>Required for vet routing. Open Google Maps → long-press your location → copy the coordinates.</Text>
-          <View style={styles.rowWrap}>
-            <TextInput
-              value={homeLatitude}
-              onChangeText={v => { setHomeLatitude(v); setErrors(p => { const n = { ...p }; delete n.coords; return n }) }}
-              onBlur={() => validateField('coords', homeLatitude)}
-              placeholder="Latitude (e.g. 28.6139)"
-              placeholderTextColor={colors.muted}
-              keyboardType="numeric"
-              style={[styles.coordInput, { flex: 1 }]}
-            />
-            <TextInput
-              value={homeLongitude}
-              onChangeText={v => { setHomeLongitude(v); setErrors(p => { const n = { ...p }; delete n.coords; return n }) }}
-              onBlur={() => validateField('coords', homeLongitude)}
-              placeholder="Longitude (e.g. 77.2090)"
-              placeholderTextColor={colors.muted}
-              keyboardType="numeric"
-              style={[styles.coordInput, { flex: 1 }]}
-            />
-          </View>
-          {errors.coords ? <Text style={styles.fieldError}>{errors.coords}</Text> : null}
-        </View>
-      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Pick a slot</Text>
@@ -292,7 +271,9 @@ export default function BookingScreen() {
         <Text style={styles.summaryTotal}>Total ₹{amount}</Text>
       </View>
 
-      <PrimaryButton title={loading ? 'Creating booking...' : `Confirm & Pay ₹${amount}`} onPress={handleProceed} />
+      {submitError ? <ErrorCard message={submitError} onRetry={handleProceed} /> : null}
+
+      <PrimaryButton title={loading ? 'Creating booking…' : `Confirm & Pay ₹${amount}`} onPress={handleProceed} disabled={loading} />
     </ScrollView>
   )
 }
@@ -312,7 +293,7 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   pillText: { color: colors.text, fontWeight: '700' },
   pillTextActive: { color: colors.onPrimary },
-  typeCard: { width: '31%', minWidth: 96, padding: 12, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSoft },
+  typeCard: { flexGrow: 1, flexBasis: '47%', minWidth: 120, padding: 14, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSoft },
   typeCardActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   typeLabel: { fontWeight: '800', color: colors.text },
   typeLabelActive: { color: colors.primary },
@@ -333,8 +314,6 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
   summaryTotal: { color: colors.text, fontSize: 20, fontWeight: '900' },
   helperText: { color: colors.muted, marginTop: 6, marginBottom: 10, fontSize: 12, lineHeight: 17 },
-  sectionTitle2: { fontSize: 14, fontWeight: '800', color: colors.text, marginTop: spacing.md, marginBottom: 4 },
-  coordInput: { padding: 12, borderRadius: radius.md, backgroundColor: colors.surfaceSoft, borderWidth: 1, borderColor: colors.border, color: colors.text },
   error: { color: colors.danger, marginTop: 8 },
   fieldError: { color: colors.danger, fontSize: 12, marginTop: 4 },
 })

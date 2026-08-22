@@ -4,17 +4,18 @@ import VetCard from '../../components/VetCard'
 import ErrorCard from '../../components/ErrorCard'
 import EmptyState from '../../components/EmptyState'
 import { useNavigation } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
 import { getVets } from '../../services'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { normalizeVet, pickArray } from '../../utils/backendAdapters'
+import { parseApiError } from '../../utils/apiError'
 
-type FilterKey = 'emergency' | 'available' | 'rating' | 'homeVisit' | 'online'
+type FilterKey = 'emergency' | 'available' | 'rating' | 'online'
 
 const FILTERS: { key: FilterKey; label: string; param: string }[] = [
   { key: 'emergency', label: 'Emergency', param: 'emergency_only=true' },
   { key: 'available', label: 'Available now', param: 'available_only=true' },
   { key: 'rating', label: 'Rating 4.5+', param: 'min_rating=4.5' },
-  { key: 'homeVisit', label: 'Home visit', param: 'home_visit_available=true' },
   { key: 'online', label: 'Online', param: 'online_available=true' },
 ]
 
@@ -53,8 +54,8 @@ export default function SearchScreen() {
         const data = res?.data as any
         const list = pickArray(data, ['vets', 'nearby_vets', 'all_vets', 'city_vets']).map((vet, index) => normalizeVet(vet, index))
         setVets(list)
-      } catch {
-        setError('Unable to load. Check your connection and try again.')
+      } catch (e) {
+        setError(parseApiError(e))
         setVets([])
       } finally {
         setLoading(false)
@@ -81,6 +82,7 @@ export default function SearchScreen() {
       <Text style={styles.subtitle}>Find nearby clinics, emergency care, and online consults.</Text>
 
       <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={20} color={colors.muted} />
         <TextInput
           placeholder="Search vets or clinics"
           value={query}
@@ -107,8 +109,12 @@ export default function SearchScreen() {
 
       <View style={styles.resultsHeader}>
         <Text style={styles.sectionTitle}>Results</Text>
-        <Text style={styles.sectionMeta}>{loading ? 'Loading…' : `${data.length} vets`}</Text>
+        <Pressable style={styles.mapToggle} onPress={() => nav.navigate('NearbyVets')}>
+          <Ionicons name="map-outline" size={15} color={colors.primary} />
+          <Text style={styles.mapToggleText}>Map</Text>
+        </Pressable>
       </View>
+      <Text style={styles.sectionMeta}>{loading ? 'Loading…' : `${data.length} vets`}</Text>
 
       {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} /> : null}
 
@@ -126,7 +132,7 @@ export default function SearchScreen() {
 
       {data.map(vet => (
         <View key={vet.id} style={styles.resultCard}>
-          <VetCard vet={vet} onPress={() => nav.navigate('VetDetail', { vetId: vet.uuid || vet.id, vet })} />
+          <VetCard vet={vet} fullWidth onPress={() => nav.navigate('VetDetail', { vetId: vet.uuid || vet.id, vet })} />
         </View>
       ))}
     </ScrollView>
@@ -135,18 +141,23 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { marginTop: 6, color: colors.muted, lineHeight: 20 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 48 },
+  title: { ...typography.h1, color: colors.text },
+  subtitle: { marginTop: 4, ...typography.body, color: colors.muted },
   searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginTop: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 14,
+    minHeight: 54,
+    ...shadows.card,
   },
-  searchInput: { paddingVertical: 14, color: colors.text },
+  searchInput: { flex: 1, paddingVertical: 14, color: colors.text, fontSize: 15 },
   filters: { gap: 8, marginTop: spacing.md, marginBottom: spacing.md },
   chip: {
     paddingHorizontal: 14,
@@ -159,8 +170,20 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
   chipTextActive: { color: colors.onPrimary },
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
-  sectionMeta: { color: colors.muted },
-  resultCard: { marginBottom: spacing.sm },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  mapToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  mapToggleText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
+  sectionTitle: { ...typography.h2, color: colors.text },
+  sectionMeta: { color: colors.muted, marginTop: spacing.xs, marginBottom: spacing.sm },
+  resultCard: { marginBottom: spacing.xs },
 })

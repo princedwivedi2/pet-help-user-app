@@ -2,7 +2,7 @@ import { request } from './client'
 
 export async function createConsultation(payload: {
   modality: 'video' | 'audio' | 'chat'
-  pet_uuid?: string | null
+  pet_id?: number | null
   issue_category?: string
   issue_description?: string
   fee_amount?: number | null
@@ -28,4 +28,8 @@ export async function sendConsultationMessage(uuid: string, content: string) {
     method: 'POST',
     body: JSON.stringify({ content }),
   })
+}
+
+export async function completeConsultation(uuid: string) {
+  return request(`/consultations/${uuid}/complete`, { method: 'POST' })
 }
