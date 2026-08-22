@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthProvider'
 import { getAppointments, getPets, getUnreadNotificationCount, getVets, resendVerificationEmail } from '../../services'
 import { colors, radius, typography } from '../../theme'
 import { normalizeAppointment, normalizePet, normalizeVet, pickArray } from '../../utils/backendAdapters'
+import { resolveMediaUrl } from '../../utils/adapters'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
 
@@ -93,12 +94,12 @@ export default function HomeScreen() {
   const pet = pets[0]
   const upcoming = appointments.find(item => item.status !== 'completed' && item.status !== 'cancelled')
   const petName = pet?.name || 'Bruno'
-  const petPhoto = pet?.photoUrl || pet?.raw?.photo_url || FALLBACK_IMAGES.pet
+  const petPhoto = pet?.photoUrl || resolveMediaUrl(pet?.raw?.photo_url) || FALLBACK_IMAGES.pet
   const petDescription = [pet?.breed || pet?.species || 'Golden Retriever', pet?.age || '3 years'].filter(Boolean).join(' · ')
   const appointmentVet = upcoming?.vet || 'Dr. Ananya Rao'
   const appointmentTime = upcoming?.when || 'Today, 4:30 PM'
   const appointmentMode = upcoming?.raw?.consultation_type || upcoming?.raw?.modality || upcoming?.raw?.visit_type || 'Video consultation'
-  const appointmentPhoto = upcoming?.raw?.vet?.photo_url || upcoming?.raw?.vet?.avatar || FALLBACK_IMAGES.appointmentVet
+  const appointmentPhoto = resolveMediaUrl(upcoming?.raw?.vet?.photo_url) || resolveMediaUrl(upcoming?.raw?.vet?.avatar) || FALLBACK_IMAGES.appointmentVet
   const careTitle = pet?.medication || 'Bravecto Chewable'
   const careDescription = pet?.reminder || 'Flea & tick prevention · With food'
   const visibleVets = vets.slice(0, 2)
@@ -214,7 +215,7 @@ function SectionHeader({ title, action, onPress }: { title: string; action: stri
 }
 
 function HomeVetCard({ vet, index, onPress }: { vet: any; index: number; onPress: () => void }) {
-  const photo = vet.photoUrl || vet.raw?.photo_url || vet.raw?.profile_photo_url || FALLBACK_IMAGES.vets[index % FALLBACK_IMAGES.vets.length]
+  const photo = vet.photoUrl || resolveMediaUrl(vet.raw?.photo_url) || resolveMediaUrl(vet.raw?.profile_photo_url) || FALLBACK_IMAGES.vets[index % FALLBACK_IMAGES.vets.length]
   return (
     <View style={styles.vetCard}>
       <View style={styles.vetMedia}><Image source={{ uri: photo }} style={styles.image} /></View>

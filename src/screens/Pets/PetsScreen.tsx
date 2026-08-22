@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, radius, spacing } from '../../theme'
 import { normalizePet, petAgeLabel, pickArray } from '../../utils/backendAdapters'
+import { resolveMediaUrl } from '../../utils/adapters'
 import { parseApiError, getValidationErrors } from '../../utils/apiError'
 
 type IconName = React.ComponentProps<typeof Ionicons>['name']
@@ -119,7 +120,7 @@ export default function PetsScreen() {
     setPetBirthDate(pet.raw?.birth_date ? String(pet.raw.birth_date).slice(0, 10) : '')
     setPetWeight(pet.raw?.weight_kg != null ? String(pet.raw.weight_kg) : '')
     setPhotoUri('')
-    setExistingPhotoUrl(pet.photoUrl || pet.raw?.photo_url || '')
+    setExistingPhotoUrl(pet.photoUrl || resolveMediaUrl(pet.raw?.photo_url) || '')
     setPetNotes(pet.raw?.medical_notes || '')
     setFormErrors({})
     setFormVisible(true)
@@ -556,7 +557,7 @@ export default function PetsScreen() {
 }
 
 function PetAvatar({ pet, size }: { pet: any; size: number }) {
-  const photo = pet.photoUrl || pet.raw?.photo_url
+  const photo = pet.photoUrl || resolveMediaUrl(pet.raw?.photo_url)
   const initial = String(pet.name || 'P').charAt(0).toUpperCase()
   return (
     <View style={[styles.petAvatar, { width: size, height: size, borderRadius: size / 2 }]}>

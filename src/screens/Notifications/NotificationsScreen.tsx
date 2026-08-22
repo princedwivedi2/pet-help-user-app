@@ -10,6 +10,47 @@ import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { pickArray } from '../../utils/backendAdapters'
 import { parseApiError } from '../../utils/apiError'
 
+// `n.type` on a Laravel DatabaseNotification is the fully-qualified class name
+// (e.g. "App\Notifications\AppointmentStatusNotification"), not something
+// human-readable — the readable label lives at `data.type` (a semantic slug)
+// and, for older rows saved before notifications carried a `data.title`, has
+// to be derived here instead of falling back to the raw class name.
+const TITLE_BY_TYPE: Record<string, string> = {
+  appointment_booked: 'New Appointment Request',
+  appointment_status_changed: 'Appointment Update',
+  sos_status_update: 'SOS Update',
+  sos_alert: 'SOS Emergency Request',
+  vet_approved: 'Profile Approved',
+  waitlist_slot_available: 'Appointment Slot Available',
+  overdue_medication: 'Overdue Medication Alert',
+  document_expiry: 'Pet Document Expiring Soon',
+  pet_reminder: 'Pet Reminder',
+}
+
+const STATUS_TITLE_SUFFIX: Record<string, string> = {
+  accepted: 'Appointment Accepted',
+  rejected: 'Appointment Rejected',
+  confirmed: 'Appointment Confirmed',
+  in_progress: 'Vet Visit Started',
+  completed: 'Appointment Completed',
+  cancelled: 'Appointment Cancelled',
+  cancelled_by_user: 'Appointment Cancelled',
+  cancelled_by_vet: 'Appointment Cancelled by Vet',
+  no_show: 'Appointment No-Show',
+}
+
+function titleFor(n: any): string {
+  if (n.title) return n.title
+  if (n.data?.title) return n.data.title
+  const type = n.data?.type as string | undefined
+  if (type === 'appointment_status_changed' && n.data?.new_status) {
+    const specific = STATUS_TITLE_SUFFIX[n.data.new_status as string]
+    if (specific) return specific
+  }
+  if (type && TITLE_BY_TYPE[type]) return TITLE_BY_TYPE[type]
+  return 'Notification'
+}
+
 export default function NotificationsScreen() {
   const nav = useNavigation<any>()
   const [notifications, setNotifications] = useState<any[]>([])
@@ -111,7 +152,7 @@ export default function NotificationsScreen() {
       {!error && notifications.map(n => {
         const id = String(n.id || n.uuid || '')
         const isRead = Boolean(n.read_at)
-        const title = n.title || n.data?.title || n.type?.replace(/_/g, ' ') || 'Notification'
+        const title = titleFor(n)
         const body = n.body || n.data?.body || n.message || ''
         const createdAt = n.created_at ? new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''
 

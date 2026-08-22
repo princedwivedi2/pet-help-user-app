@@ -14,7 +14,7 @@ export interface VideoViewProps {
 }
 
 export interface RtcProvider {
-  init(appId: string): Promise<void>;
+  init(appId: string, options?: { enableVideo?: boolean }): Promise<void>;
   joinChannel(channel: string, token: string, uid: number): Promise<void>;
   leaveChannel(): Promise<void>;
   toggleMic(on: boolean): Promise<void>;

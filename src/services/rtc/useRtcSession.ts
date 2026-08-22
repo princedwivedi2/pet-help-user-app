@@ -4,17 +4,14 @@ import { request } from '../client';
 import { AgoraRtcProvider } from './AgoraRtcProvider';
 import type { ConnectionState, RtcProvider, RtcTokenResponse } from './types';
 
-async function requestRtcPermissions(): Promise<boolean> {
+async function requestRtcPermissions(audioOnly: boolean): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
   try {
-    const results = await PermissionsAndroid.requestMultiple([
-      PermissionsAndroid.PERMISSIONS.CAMERA,
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-    ]);
-    return (
-      results[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED &&
-      results[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED
-    );
+    const permissions = audioOnly
+      ? [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO]
+      : [PermissionsAndroid.PERMISSIONS.CAMERA, PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
+    const results = await PermissionsAndroid.requestMultiple(permissions);
+    return permissions.every((p) => results[p] === PermissionsAndroid.RESULTS.GRANTED);
   } catch {
     return false;
   }
@@ -62,8 +59,8 @@ export function useRtcSession(consultationUuid: string, options?: { audioOnly?: 
   }, [consultationUuid]);
 
   useEffect(() => {
-    requestRtcPermissions().then(setPermissionsGranted);
-  }, []);
+    requestRtcPermissions(audioOnly).then(setPermissionsGranted);
+  }, [audioOnly]);
 
   useEffect(() => {
     if (!permissionsGranted || !tokenData) return;
@@ -89,9 +86,8 @@ export function useRtcSession(consultationUuid: string, options?: { audioOnly?: 
       return;
     }
     provider
-      .init(appId)
+      .init(appId, { enableVideo: !audioOnly })
       .then(() => provider.joinChannel(tokenData.channel, tokenData.token, tokenData.uid))
-      .then(() => { if (audioOnly) provider.toggleCamera(false); })
       .catch((err: unknown) => {
         console.error('[RTC] join failed', err);
         if (!destroyedRef.current) setConnectionState('failed');

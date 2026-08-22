@@ -8,10 +8,12 @@ import { colors, radius, shadows, spacing, typography } from '../../theme'
 import { createConsultation, getPets } from '../../services'
 import { parseApiError } from '../../utils/apiError'
 
+// 'chat' isn't an instant-match request to a vet — it opens the AI assistant
+// (see handleSelect below), so it's excluded from MODES entirely and shown
+// as its own card with distinct copy.
 const MODES = [
-  { value: 'video', icon: 'videocam' as const, label: 'Video call', desc: 'Meet face-to-face and show visible symptoms', paid: true },
+  { value: 'video', icon: 'videocam' as const, label: 'Video call', desc: 'Get matched with any available vet right now', paid: true },
   { value: 'audio', icon: 'call' as const, label: 'Audio call', desc: 'Talk privately when video is not needed', paid: true },
-  { value: 'chat', icon: 'chatbubble-ellipses' as const, label: 'Chat', desc: 'Share a question through secure messages', paid: false },
 ] as const
 
 // Fee shown on the picker — backend will set the real amount on the order
@@ -22,7 +24,7 @@ export default function ModalityPickerScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleSelect(modality: 'video' | 'audio' | 'chat') {
+  async function handleSelect(modality: 'video' | 'audio') {
     setLoading(true)
     setError('')
     try {
@@ -38,6 +40,10 @@ export default function ModalityPickerScreen() {
         modality,
         pet_id: petId ?? null,
         payment_uuid: null,
+        // Video/audio consults require payment. Sent as paise so the backend
+        // has a fee to charge — without this the session is created with
+        // fee_amount = null and payment creation fails downstream.
+        fee_amount: CONSULT_FEE_DISPLAY * 100,
       })
       const consultation = (res?.data as any)?.consultation
       const consultationId: string | undefined =
@@ -48,22 +54,13 @@ export default function ModalityPickerScreen() {
         return
       }
 
-      if (modality === 'chat') {
-        // Chat is free — go straight to the room
-        nav.navigate('ConsultationRoom', {
-          consultationId,
-          modality,
-          vetName: undefined,
-        })
-      } else {
-        // Video / audio require payment — gate through PaymentScreen
-        nav.navigate('Payment', {
-          consultationId,
-          amount: CONSULT_FEE_DISPLAY * 100, // paise
-          modality,
-          vetName: undefined,
-        })
-      }
+      // Requires payment before any vet can join — gate through PaymentScreen
+      nav.navigate('Payment', {
+        consultationId,
+        amount: CONSULT_FEE_DISPLAY * 100, // paise
+        modality,
+        vetName: undefined,
+      })
     } catch (e) {
       setError(parseApiError(e))
     } finally {
@@ -73,7 +70,7 @@ export default function ModalityPickerScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <PageHeader title="Choose how to connect" subtitle="Select the format that fits your pet's concern" />
+      <PageHeader title="Get instant care" subtitle="Any available vet will pick up your request right away" />
       <View style={styles.careNote}><View style={styles.careNoteIcon}><Ionicons name="shield-checkmark-outline" size={20} color={colors.accent} /></View><Text style={styles.careNoteText}>Every option creates a secure consultation and keeps the outcome with your pet's care history.</Text></View>
 
       {loading ? (
@@ -94,23 +91,36 @@ export default function ModalityPickerScreen() {
             <Text style={styles.label}>{m.label}</Text>
             <Text style={styles.desc}>{m.desc}</Text>
           </View>
-          {m.paid ? (
-            <View style={styles.feeBadge}>
-              <Text style={styles.feeBadgeText}>₹{CONSULT_FEE_DISPLAY}</Text>
-            </View>
-          ) : (
-            <View style={[styles.feeBadge, styles.freeBadge]}>
-              <Text style={[styles.feeBadgeText, styles.freeBadgeText]}>Free</Text>
-            </View>
-          )}
+          <View style={styles.feeBadge}>
+            <Text style={styles.feeBadgeText}>₹{CONSULT_FEE_DISPLAY}</Text>
+          </View>
           <Ionicons name="chevron-forward" size={18} color={colors.subtle} />
         </Pressable>
       ))}
 
       <Text style={styles.note}>
         Video and audio consultations require a payment before the session starts.
-        Refunds are processed automatically if the call cannot connect.
+        Refunds are processed automatically if no vet is available or the call cannot connect.
       </Text>
+
+      <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>OR</Text><View style={styles.dividerLine} /></View>
+
+      <Pressable style={styles.chatCard} onPress={() => nav.navigate('Chat')} accessibilityLabel="Chat with AI assistant">
+        <View style={[styles.icon, styles.chatIcon]}><Ionicons name="sparkles" size={22} color={colors.accent} /></View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Chat with our AI assistant</Text>
+          <Text style={styles.desc}>Free, instant answers — you're talking to an AI, not a human vet</Text>
+        </View>
+        <View style={[styles.feeBadge, styles.freeBadge]}>
+          <Text style={[styles.feeBadgeText, styles.freeBadgeText]}>Free</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.subtle} />
+      </Pressable>
+
+      <Pressable style={styles.pickVetLink} onPress={() => nav.navigate('Main', { screen: 'Search' })} accessibilityLabel="Choose your own vet and time slot">
+        <Ionicons name="person-outline" size={16} color={colors.primary} />
+        <Text style={styles.pickVetLinkText}>Prefer to choose your own vet and time? Book an online appointment →</Text>
+      </Pressable>
     </ScrollView>
   )
 }
@@ -134,6 +144,7 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   icon: { width: 50, height: 50, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
+  chatIcon: { backgroundColor: colors.mint },
   label: { ...typography.h3, color: colors.text },
   desc: { ...typography.caption, color: colors.muted, marginTop: 2 },
   feeBadge: {
@@ -157,4 +168,27 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     textAlign: 'center',
   },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.lg },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { color: colors.subtle, fontSize: 12, fontWeight: '700' },
+  chatCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    ...shadows.card,
+  },
+  pickVetLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+  },
+  pickVetLinkText: { color: colors.primary, fontSize: 13, fontWeight: '600', textAlign: 'center', flexShrink: 1 },
 })

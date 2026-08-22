@@ -12,8 +12,11 @@ import { parseApiError } from '../../utils/apiError'
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   pending: { bg: colors.sky, text: colors.warning },
+  accepted: { bg: colors.primarySoft, text: colors.primary },
   confirmed: { bg: colors.primarySoft, text: colors.primary },
+  in_progress: { bg: colors.primarySoft, text: colors.primary },
   completed: { bg: colors.mint, text: colors.accent },
+  rejected: { bg: colors.dangerSoft, text: colors.danger },
   cancelled: { bg: colors.dangerSoft, text: colors.danger },
 }
 
@@ -111,6 +114,7 @@ export default function AppointmentDetailScreen() {
   const isHomeVisit = type === 'home_visit' || type === 'home visit'
   const fee = raw.consultation_fee ?? raw.fee ?? ''
   const paymentStatus = raw.payment_status ?? raw.payment?.status ?? ''
+  const rejectionReason = raw.rejection_reason ?? appt.rejection_reason ?? ''
 
   function handleCancel() {
     Alert.alert(
@@ -168,6 +172,16 @@ export default function AppointmentDetailScreen() {
             <DetailRow label="Payment status" value={paymentStatus || 'Pending'} />
           </View>
 
+          {/* Rejection notice */}
+          {status === 'rejected' ? (
+            <View style={[styles.card, styles.heroCard, { backgroundColor: colors.dangerSoft }]}>
+              <Text style={styles.cardTitle}>Declined by vet</Text>
+              <Text style={styles.detailValue}>
+                {rejectionReason || 'The vet was unable to accept this appointment. Please book another time slot or a different vet.'}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Review card — only for completed appointments */}
           {status === 'completed' ? (
             <View style={styles.card}>
@@ -217,7 +231,7 @@ export default function AppointmentDetailScreen() {
           ) : null}
 
           {/* Actions card */}
-          {(status === 'pending' || status === 'confirmed') ? (
+          {(status === 'pending' || status === 'accepted' || status === 'confirmed') ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Actions</Text>
               <Pressable

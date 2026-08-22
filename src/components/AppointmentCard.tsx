@@ -4,7 +4,12 @@ import { Ionicons } from '@expo/vector-icons'
 import { colors, radius, shadows, spacing, typography } from '../theme'
 
 export default function AppointmentCard({ appt }: { appt: any }) {
-  const statusColor = appt.status === 'confirmed' || appt.status === 'completed' ? colors.accent : appt.status === 'cancelled' ? colors.danger : colors.warning
+  const statusColor =
+    appt.status === 'accepted' || appt.status === 'confirmed' || appt.status === 'completed' || appt.status === 'in_progress'
+      ? colors.accent
+      : appt.status === 'cancelled' || appt.status === 'rejected'
+      ? colors.danger
+      : colors.warning
 
   return (
     <View style={styles.card}>

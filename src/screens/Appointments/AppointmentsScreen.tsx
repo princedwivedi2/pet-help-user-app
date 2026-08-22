@@ -33,8 +33,8 @@ export default function AppointmentsScreen() {
     setError('')
     try {
       const [upcomingRes, pastRes] = await Promise.allSettled([
-        getAppointments('status=pending,confirmed&per_page=20'),
-        getAppointments('status=completed,cancelled&per_page=20'),
+        getAppointments('status=pending,accepted,confirmed,in_progress&per_page=20'),
+        getAppointments('status=completed,cancelled,rejected&per_page=20'),
       ])
 
       if (upcomingRes.status === 'fulfilled') {
@@ -156,7 +156,7 @@ export default function AppointmentsScreen() {
             <AppointmentCard appt={a} />
           </Pressable>
           <View style={styles.actionRow}>
-            {(a.status === 'pending' || a.status === 'confirmed') ? (
+            {(a.status === 'pending' || a.status === 'accepted' || a.status === 'confirmed') ? (
               <Pressable style={styles.cancelBtn} onPress={() => { setCancelTarget(a); setCancelReason('') }}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </Pressable>

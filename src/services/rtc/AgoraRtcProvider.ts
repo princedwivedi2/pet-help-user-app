@@ -16,7 +16,8 @@ export class AgoraRtcProvider implements RtcProvider {
     this.callbacks = callbacks;
   }
 
-  async init(appId: string): Promise<void> {
+  async init(appId: string, options?: { enableVideo?: boolean }): Promise<void> {
+    const enableVideo = options?.enableVideo ?? true;
     this.engine = createAgoraRtcEngine();
     this.engine.initialize({
       appId,
@@ -30,9 +31,13 @@ export class AgoraRtcProvider implements RtcProvider {
       onError: (code, msg) => this.callbacks.onError?.(code, msg ?? ''),
     };
     this.engine.registerEventHandler(this.handler);
-    this.engine.enableVideo();
     this.engine.enableAudio();
-    this.engine.startPreview();
+    // Audio-only sessions never touch the camera — no enableVideo/startPreview,
+    // so the device camera light never turns on for an "audio call".
+    if (enableVideo) {
+      this.engine.enableVideo();
+      this.engine.startPreview();
+    }
   }
 
   async joinChannel(channel: string, token: string, uid: number): Promise<void> {

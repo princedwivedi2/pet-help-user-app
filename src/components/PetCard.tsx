@@ -2,9 +2,10 @@ import React from 'react'
 import { Image, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { colors, radius, shadows, spacing, typography } from '../theme'
+import { resolveMediaUrl } from '../utils/adapters'
 
 export default function PetCard({ pet, fullWidth }: { pet: any; fullWidth?: boolean }) {
-  const photo = pet.photoUrl || pet.raw?.photo_url
+  const photo = pet.photoUrl || resolveMediaUrl(pet.raw?.photo_url)
   const initial = String(pet.name || '').trim().charAt(0).toUpperCase()
   const meta = [pet.species, pet.breed, pet.age, pet.weight].filter(Boolean).join(' · ')
   const size = fullWidth ? 54 : 50

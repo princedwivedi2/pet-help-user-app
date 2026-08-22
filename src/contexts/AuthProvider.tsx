@@ -53,8 +53,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTokenState(t)
         try {
           const res = await api.me()
-          if (res?.data) setUser(res.data)
-          else {
+          if (res?.data) {
+            setUser(res.data)
+            // Re-register on every resumed session too, not just fresh logins —
+            // the FCM/APNs token can rotate independently of the auth session.
+            registerDeviceTokenSilently()
+          } else {
             await SecureStore.deleteItemAsync('authToken')
             setTokenState(null)
           }
